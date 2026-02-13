@@ -1,0 +1,322 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{physics}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+%------------------------------------------------------------------------------
+% CUSTOM SYMBOL: Hb ligature approximation
+% The right leg of H shares with the ascender of b
+%------------------------------------------------------------------------------
+\newcommand{\Hb}{\textnormal{H\kern-0.12em b}}
+\newcommand{\Hbn}{\Hb_n}
+\newcommand{\Hbfour}{\Hb_4}
+
+% Old notation (for comparison)
+\newcommand{\Tc}{\mathcal{T}}
+
+% Other notation
+\newcommand{\dgeo}{\delta}
+\newcommand{\murad}{\mu_0}
+\newcommand{\Mpl}{M_{\text{Pl}}}
+\newcommand{\lp}{\ell_P}
+
+\title{\textbf{Technical Note: Redefining the Transdimensional Constant}\\[0.5em]
+\Large From $\Tc$ to Holographic Bit Density $\Hb_n$}
+
+\author{M.\ Hubka}
+\date{February 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We redefine the ``transdimensional constant'' $\Tc = 1/(4\ln 2)$ as the \textbf{holographic bit density} $\Hbfour$ specific to 4-dimensional spacetime. The generalized formula $\Hbn = 1/(n\ln 2)$ represents the information capacity per Planck area in $n$ dimensions. This reinterpretation removes conceptual ambiguity, grounds the constant in fundamental holographic physics, and opens the framework to multi-dimensional analysis. All numerical predictions remain unchanged.
+\end{abstract}
+
+%==============================================================================
+\section{The Problem with ``Transdimensional''}
+\label{sec:problem}
+%==============================================================================
+
+In Dimensional Collapse Theory (DCT), the constant
+\begin{equation}
+\Tc = \frac{1}{4\ln 2} \approx 0.3607
+\end{equation}
+was introduced as a ``transdimensional constant'' governing the $D \to D-2$ collapse of spacetime at black hole horizons.
+
+However, when $\Tc$ appeared in Quantum Spectrodynamics (QSD) as:
+\begin{itemize}[nosep]
+    \item The Heisenberg coupling: $J = \Tc$
+    \item The master relation: $\alpha^{-1} \cdot \dgeo \approx 2$ (via $\Tc/\dgeo$)
+    \item The dimensionless VEV: $\nu_0 = \Tc/\dgeo$
+\end{itemize}
+the ``transdimensional'' interpretation became strained. QSD operates entirely within 4D; there is no dimensional collapse in the Standard Model derivations.
+
+\textbf{The issue}: $\Tc$ is not fundamentally about dimensional \emph{transition}---it is about dimensional \emph{identity}. The ``4'' in $1/(4\ln 2)$ reflects that we live in 4D spacetime, not that dimensions are collapsing.
+
+%==============================================================================
+\section{The Holographic Bit Density}
+\label{sec:definition}
+%==============================================================================
+
+\begin{definition}[Holographic Bit Density]
+The \textbf{holographic bit density} in $n$-dimensional spacetime is:
+\begin{equation}
+\boxed{\Hbn = \frac{1}{n \ln 2}}
+\end{equation}
+This represents the information capacity (in bits) per Planck-area cell of an $(n-2)$-dimensional holographic screen embedded in $n$ dimensions.
+\end{definition}
+
+\begin{remark}[Notation]
+We write $\Hb$ as a ligature where the right leg of `H' is shared with the ascender of `b', symbolizing the unity of \textbf{H}olographic and \textbf{b}it concepts. When a subscript is needed, we write $\Hbn$ for general dimension or $\Hbfour$ for our 4D universe.
+\end{remark}
+
+\subsection{Values Across Dimensions}
+
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+\textbf{Dimension $n$} & \textbf{Holographic Bit Density $\Hbn$} & \textbf{Numerical Value} \\
+\midrule
+2 & $1/(2\ln 2)$ & 0.7213 \\
+3 & $1/(3\ln 2)$ & 0.4809 \\
+\textbf{4} & $\mathbf{1/(4\ln 2)}$ & \textbf{0.3607} \\
+5 & $1/(5\ln 2)$ & 0.2885 \\
+6 & $1/(6\ln 2)$ & 0.2404 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Physical interpretation}: Lower-dimensional spaces have higher holographic bit density. Information is ``packed tighter'' when there are fewer dimensions to spread across.
+
+%==============================================================================
+\section{Connection to Bekenstein-Hawking Entropy}
+\label{sec:BH}
+%==============================================================================
+
+The Bekenstein-Hawking entropy formula in 4D is:
+\begin{equation}
+S_{\text{BH}} = \frac{A}{4\lp^2} \quad \text{(in nats)}
+\end{equation}
+
+Converting to bits ($1~\text{bit} = \ln 2~\text{nats}$):
+\begin{equation}
+S_{\text{BH}} = \frac{A}{4\ln 2 \cdot \lp^2} \quad \text{(in bits)}
+\end{equation}
+
+This means the \textbf{area per bit} is:
+\begin{equation}
+A_{\text{bit}} = 4\ln 2 \cdot \lp^2
+\end{equation}
+
+The \textbf{bits per Planck area} is the inverse:
+\begin{equation}
+\Hbfour = \frac{1}{4\ln 2} \approx 0.3607~\text{bits}/\lp^2
+\end{equation}
+
+This is precisely our holographic bit density. The formula generalizes to $n$ dimensions as $\Hbn = 1/(n\ln 2)$, consistent with dimensional analysis of holographic entropy in arbitrary dimensions.
+
+%==============================================================================
+\section{Reinterpretation in QSD}
+\label{sec:qsd}
+%==============================================================================
+
+\subsection{The Heisenberg Coupling}
+
+\textbf{Old interpretation}: $J = \Tc$ (``transdimensional constant sets spin coupling'')
+
+\textbf{New interpretation}: $J = \Hbfour$ (``information capacity of 4D holographic cell sets spin coupling'')
+
+The Heisenberg coupling on $K_4$ is the rate at which quantum information can flow through each edge. This rate is bounded by the holographic bit density of the ambient spacetime.
+
+\subsection{The Dimensionless VEV}
+
+\textbf{Old formula}: $\nu_0 = \Tc/\dgeo$
+
+\textbf{New formula}: $\nu_0 = \Hbfour/\dgeo$
+
+The dimensionless vacuum expectation value is the ratio of:
+\begin{itemize}[nosep]
+    \item $\Hbfour$: Information capacity (what the vacuum can hold)
+    \item $\dgeo$: Geometric strain (how much the code deviates from perfection)
+\end{itemize}
+
+\subsection{The Master Relation}
+
+The relation $\alpha^{-1} \cdot \dgeo \approx 2$ becomes:
+\begin{equation}
+\alpha^{-1} \approx \frac{2}{\dgeo} = \frac{2 \cdot \Hbfour}{\Hbfour \cdot \dgeo} = \frac{2\Hbfour}{\nu_0^{-1} \cdot \Hbfour} 
+\end{equation}
+
+The fine structure constant is determined by the holographic information structure of 4D spacetime.
+
+%==============================================================================
+\section{Reinterpretation in DCT}
+\label{sec:dct}
+%==============================================================================
+
+\subsection{The Ledger Entropy}
+
+\textbf{Old interpretation}: Fraction $\Tc$ of horizon entropy resides on the ledger during collapse.
+
+\textbf{New interpretation}: The ledger stores information at the 4D holographic bit density $\Hbfour$.
+
+The ledger is not receiving a ``fraction'' of entropy---it is a 2D surface with information density $\Hbfour$ bits per Planck area, as required by 4D holography.
+
+\subsection{Dimensional Collapse}
+
+The $D \to D-2$ collapse still occurs, but the interpretation shifts:
+
+\textbf{Old}: ``$\Tc$ governs the compression during collapse.''
+
+\textbf{New}: ``Collapse occurs because different dimensions have different holographic capacities.''
+
+The entropy change during $D \to D-2$ collapse involves:
+\begin{equation}
+\Delta S \propto \left(\Hb_{D-2} - \Hb_D\right) \times A = \left(\frac{1}{D-2} - \frac{1}{D}\right) \frac{A}{\ln 2}
+\end{equation}
+
+For $D=4 \to D=2$:
+\begin{equation}
+\Hb_2 - \Hbfour = \frac{1}{2\ln 2} - \frac{1}{4\ln 2} = \frac{1}{4\ln 2} = \Hbfour
+\end{equation}
+
+The 2D ledger has \emph{twice} the bit density of 4D spacetime, explaining why it can efficiently store the information of collapsing matter.
+
+%==============================================================================
+\section{Why This Matters}
+\label{sec:significance}
+%==============================================================================
+
+\subsection{Conceptual Clarity}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Aspect} & \textbf{Old ($\Tc$)} & \textbf{New ($\Hbn$)} \\
+\midrule
+Name & Transdimensional constant & Holographic bit density \\
+Interpretation & Process (collapse) & State (structure) \\
+Dimension dependence & Hidden in ``4'' & Explicit in $n$ \\
+Physical meaning & Unclear & Bits per Planck area \\
+QSD context & Awkward & Natural \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Generalization to Other Dimensions}
+
+The framework now naturally extends to other dimensional phases:
+\begin{itemize}[nosep]
+    \item \textbf{Pre-collapse phase} ($D > 4$): Lower bit density $\Hb_D < \Hbfour$
+    \item \textbf{Ledger phase} ($D = 2$): Higher bit density $\Hb_2 = 2\Hbfour$
+    \item \textbf{Hypothetical 3D phase}: Intermediate $\Hb_3 = (4/3)\Hbfour$
+\end{itemize}
+
+\subsection{Connection to Other Theories}
+
+The holographic bit density connects naturally to:
+\begin{itemize}[nosep]
+    \item \textbf{AdS/CFT}: Boundary information density
+    \item \textbf{Loop Quantum Gravity}: Spin network state counting
+    \item \textbf{String Theory}: Worldsheet information capacity
+    \item \textbf{Causal Set Theory}: Sprinkling density
+\end{itemize}
+
+%==============================================================================
+\section{Summary of Changes}
+\label{sec:summary}
+%==============================================================================
+
+\subsection{What Changes}
+
+\begin{enumerate}
+    \item \textbf{Terminology}: ``Transdimensional constant $\Tc$'' â†’ ``Holographic bit density $\Hbn$''
+    
+    \item \textbf{Symbol}: $\Tc$ â†’ $\Hbfour$ (for 4D) or $\Hbn$ (general)
+    
+    \item \textbf{Interpretation}: Process constant â†’ State parameter
+    
+    \item \textbf{Formula}: Fixed $1/(4\ln 2)$ â†’ General $1/(n\ln 2)$
+\end{enumerate}
+
+\subsection{What Does Not Change}
+
+\begin{enumerate}
+    \item \textbf{Numerical value}: $\Hbfour = 1/(4\ln 2) = 0.3607$ (unchanged)
+    
+    \item \textbf{All QSD predictions}: $\alpha^{-1}$, $\sin^2\theta_W$, $m_H$, $E_{\text{syn}}$ (unchanged)
+    
+    \item \textbf{All DCT results}: Ledger dynamics, UHP, entropy relations (unchanged)
+    
+    \item \textbf{Derived quantities}: $\dgeo$, $\murad$, $\nu_0$ (unchanged)
+\end{enumerate}
+
+%==============================================================================
+\section{Updated Notation Guide}
+\label{sec:notation}
+%==============================================================================
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Symbol} & \textbf{Definition} & \textbf{Value (4D)} \\
+\midrule
+$\Hbn$ & $1/(n\ln 2)$ & --- \\
+$\Hbfour$ & $1/(4\ln 2)$ & 0.3607 \\
+$\dgeo$ & $3/(80\varphi^2)$ & 0.01432 \\
+$\nu_0$ & $\Hbfour/\dgeo$ & 25.18 \\
+$\murad$ & $\Mpl/2^{60} \cdot \varphi^2(1-6\dgeo)$ & 25.34 GeV \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{LaTeX Implementation}
+
+For documents using this notation:
+\begin{verbatim}
+% Hb ligature (approximate)
+\newcommand{\Hb}{\textnormal{H\kern-0.12em b}}
+\newcommand{\Hbn}{\Hb_n}
+\newcommand{\Hbfour}{\Hb_4}
+\end{verbatim}
+
+%==============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%==============================================================================
+
+The redefinition from ``transdimensional constant'' to ``holographic bit density'' is not merely cosmetic. It:
+
+\begin{enumerate}
+    \item \textbf{Grounds the constant in physics}: $\Hbfour$ has a clear meaning (bits per Planck area in 4D)
+    
+    \item \textbf{Removes conceptual strain}: No more invoking ``dimensional collapse'' in static QSD formulas
+    
+    \item \textbf{Enables generalization}: The framework naturally extends to other dimensions via $\Hbn = 1/(n\ln 2)$
+    
+    \item \textbf{Preserves all results}: Every number, prediction, and derivation remains valid
+\end{enumerate}
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\textbf{Recommendation}: All future documents should use $\Hbfour$ (or $\Hbn$ in general contexts) instead of $\Tc$. The term ``transdimensional constant'' should be retired.
+
+\end{document}

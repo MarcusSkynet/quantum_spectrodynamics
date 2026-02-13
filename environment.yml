@@ -1,0 +1,51 @@
+# Quantum Spectrodynamics — Conda Environment
+# =============================================
+#
+# Create:   conda env create -f environment.yml
+# Activate: conda activate qsd
+# Update:   conda env update -f environment.yml --prune
+#
+# The environment has three tiers:
+#   - Core:    NumPy + SciPy (sufficient to verify all predictions)
+#   - Qiskit:  Local quantum circuit simulation
+#   - IBM HW:  Execute on real IBM Quantum hardware
+#
+# All tiers are included. Comment out qiskit-ibm-runtime if you
+# don't need hardware access.
+
+name: qsd
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  # ── Python ──────────────────────────────────────────────
+  - python=3.11
+
+  # ── Core (required for all predictions) ─────────────────
+  - numpy>=1.24
+  - scipy>=1.11
+  - matplotlib>=3.7
+  - sympy>=1.12
+
+  # ── Notebook support ────────────────────────────────────
+  - jupyterlab>=4.0
+  - ipywidgets>=8.0
+
+  # ── LaTeX compilation (optional) ────────────────────────
+  # Uncomment if you want to build the paper from source:
+  # - texlive-core
+
+  # ── pip dependencies ────────────────────────────────────
+  - pip
+  - pip:
+      # Qiskit ecosystem (local simulation)
+      - qiskit>=1.0
+      - qiskit-aer>=0.13
+
+      # IBM Quantum hardware execution
+      # Comment out if hardware access is not needed
+      - qiskit-ibm-runtime>=0.20
+
+      # Visualization extras
+      - pylatexenc>=2.10        # Qiskit circuit LaTeX rendering
