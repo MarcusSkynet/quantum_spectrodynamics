@@ -11,7 +11,7 @@
 
 Quantum Spectrodynamics (QSD) is a theoretical framework that derives fundamental
 physics constants — gauge couplings, particle masses, and the cosmological constant —
-from the algebraic geometry of the **[[5,1,3]] quantum error-correcting code**.
+from the algebraic geometry of the **$[[5,1,3]]$ quantum error-correcting code**.
 
 The framework requires **zero free parameters** beyond the Planck mass. All predictions
 emerge from three constants (the *QSD triad*) that arise naturally from the code's
@@ -19,34 +19,25 @@ topology:
 
 | Constant | Symbol | Expression | Value |
 |---|---|---|---|
-| Holographic bit density | Hb₄ | 1/(4 ln 2) | 0.36067 |
-| Geometric strain | ς | 3/(80 φ²) | 0.01432 |
-| Spectral bond | ϖ | π φ² | 8.22480 |
+| Holographic bit density | $Hb_4$ | $1/(4 \ln 2)$ | 0.36067 |
+| Geometric strain | $\varsigma$ | $3/(80 \varphi^2)$ | 0.01432 |
+| Spectral bond | $\varpi$ | $\pi\varphi^2$ | 8.22480 |
 
-where φ = (1 + √5)/2 is the golden ratio.
+where $\varphi=(1+\sqrt{5})/2$ is the golden ratio.
 
 ### Key Predictions vs. Experiment
 
-| Observable | QSD Prediction | Experiment | Agreement |
-|---|---|---|---|
-| α⁻¹ (fine structure) | 137.0330 | 137.0360 (CODATA) | 22 ppm |
-| α_s (strong coupling) | 0.11781 | 0.1180 (PDG) | 0.16% |
-| sin²θ_W (weak mixing) | 0.23122 | 0.23122 (PDG) | 0.004% |
-| m_H (Higgs mass) | 126.7 GeV | 125.25 GeV | 1.2% |
-| m_W (W boson mass) | 81.1 GeV | 80.377 GeV | 0.9% |
-| log₁₀(ρ_Λ/ρ_Pl) | −121.28 | −121.27 (Planck) | 0.008% |
-
 | Symbol | Observable | QSD Prediction | Experimental Value | Source | Agreement |
 |---|---|---|---|---|---|
-| α⁻¹ | Fine structure constant | 137.0330 | 137.0360 | CODATA 2018 | 22 ppm |
-| α_s | Strong coupling at M_Z | 0.11781 | 0.1180 | PDG 2022 | 0.16% |
-| sin²θ_W | Weak mixing angle | 0.23122 | 0.23122 | PDG 2022 | 0.004% |
-| m_H | Higgs boson mass | 126.7 GeV | 125.25 GeV | PDG 2022 | 1.2% |
-| m_W | W boson mass | 81.1 GeV | 80.377 GeV | PDG 2022 | 0.9% |
-| log₁₀(ρ_Λ/ρ_Pl) | Cosmological constant | −121.28 | −121.27 | Planck 2018 | 0.008% |
+| $\alpha^{-1}$ | Fine structure constant | 137.0330 | 137.0360 | CODATA 2018 | 22 ppm |
+| $\alpha_s$ | Strong coupling at $M_Z$ | 0.11781 | 0.1180 | PDG 2022 | 0.16% |
+| $\sin^2\theta_W$ | Weak mixing angle | 0.23122 | 0.23122 | PDG 2022 | 0.004% |
+| $m_H$ | Higgs boson mass | 126.7 GeV | 125.25 GeV | PDG 2022 | 1.2% |
+| $m_W$ | W boson mass | 81.1 GeV | 80.377 GeV | PDG 2022 | 0.9% |
+| $\log(\rho_\Lambda/\rho_{Pl})$ | Cosmological constant | −121.28 | −121.27 | Planck 2018 | 0.008% |
 
 The **syndrome energy E_syn ≈ 28.2 GeV** is a novel QSD prediction corresponding to
-the dimuon excess observed by CMS at √s ≈ 28.3 GeV.
+the dimuon excess observed by CMS at $\sqrt{s} \approx 28.3$ GeV.
 
 ---
 
@@ -156,22 +147,22 @@ pdflatex qsd_main_preprint.tex
 ## Theoretical Foundation
 
 QSD begins from a single structural postulate: the physical vacuum encodes
-information through the [[5,1,3]] quantum error-correcting code. The five
-physical qubits form a complete graph K₄ embedded in a 5-cycle C₅, creating a
+information through the $[[5,1,3]]$ quantum error-correcting code. The five
+physical qubits form a complete graph $K_4$ embedded in a 5-cycle $C_5$, creating a
 geometric frustration whose resolution yields the gauge couplings of the
 Standard Model.
 
 ### The Derivation Chain
 
-1. **Code geometry → Triad constants** (Hb₄, ς, ϖ) emerge from the
-   [[5,1,3]] code's topological invariants.
+1. **Code geometry → Triad constants** ($Hb_4,\,\varsigma,\,\varpi$) emerge from the
+   $[[5,1,3]]$ code's topological invariants.
 2. **Triad → Gauge couplings** via 3-loop topological renormalization on the
-   K₄–C₅ graph structure.
-3. **Triad → Energy scale** through the 2⁶⁰ information compression factor
+   $K_4–C_5$ graph structure.
+3. **Triad → Energy scale** through the $2^{60} information compression factor
    from Planck to electroweak scale.
 4. **Triad → Mass spectrum** from syndrome extraction eigenvalues of the code.
 5. **Triad → Cosmological constant** via the entropy barrier
-   4/ς ≈ 279.3 nats.
+   $4/\varsigma \approx 279.3$ nats.
 
 Each step is derived algebraically with no fitted parameters. All derivations
 are documented across the main preprint and supplements S1–S7.
@@ -228,7 +219,7 @@ If you use this work, please cite:
 
 ```bibtex
 @article{hubka2026qsd,
-  author  = {Hubka, Marcus},
+  author  = {Hubka, Marek},
   title   = {Quantum Spectrodynamics: Deriving Standard Model Parameters
              from the Geometry of Quantum Error-Correcting Codes},
   year    = {2026},
