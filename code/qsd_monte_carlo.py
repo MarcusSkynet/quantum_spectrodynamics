@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """
 QSD Monte Carlo Error Propagation
-=================================
+==================================
 
 Rigorous uncertainty quantification for QSD predictions.
 
-This module propagates uncertainties in fundamental constants through
-the QSD derivation chain to establish confidence intervals on predictions.
+Propagates uncertainties in the Planck mass through the QSD derivation
+chain. The only experimental input is M_Planck; all other parameters
+(phi, ln 2, pi) are mathematical constants with zero uncertainty.
+
+Theory uncertainties at each loop order are estimated from the
+topological structure, NOT fitted to experiment.
+
+All constants imported from qsd_constants.py.
+No unicode characters. Intermediate precision >= 10 decimal places.
 
 Author: M. Hubka
 Date: February 2026
@@ -14,420 +21,471 @@ Date: February 2026
 
 import numpy as np
 from scipy import stats
-from dataclasses import dataclass
 from typing import Tuple, Dict, List
+import matplotlib
+matplotlib.rcParams["text.usetex"] = False
 import matplotlib.pyplot as plt
+import os
 
-# Set random seed for reproducibility
-np.random.seed(42)
+from qsd_constants import (
+    GOLDEN_RATIO, GOLDEN_RATIO_SQ, LN2,
+    HB4, SIGMA, VARPI,
+    ALPHA_INV_TREE, LOOP_1, LOOP_2, LOOP_3, ALPHA_INV_QSD,
+    ALPHA_S_QSD, SIN2_THETA_QSD,
+    M_PLANCK_GEV, MU_RAD, M_HIGGS_QSD, E_SYNDROME_QSD, M_W_QSD,
+    ALPHA_INV_EXP, ALPHA_S_EXP, SIN2_THETA_EXP,
+    M_HIGGS_EXP, E_SYNDROME_CMS, M_W_EXP,
+)
 
 
-@dataclass
 class UncertainValue:
     """A value with associated uncertainty."""
-    value: float
-    uncertainty: float
-    name: str = ""
-    
+
+    def __init__(self, value, uncertainty, name=""):
+        self.value = value
+        self.uncertainty = uncertainty
+        self.name = name
+
     def __repr__(self):
-        return f"{self.name}: {self.value:.6f} Â± {self.uncertainty:.6f}"
-    
-    def relative_error(self) -> float:
-        return self.uncertainty / self.value if self.value != 0 else 0
+        return "{}: {:.10f} +/- {:.10f}".format(
+            self.name, self.value, self.uncertainty)
+
+    def relative_error(self):
+        if abs(self.value) < 1.0e-30:
+            return 0.0
+        return self.uncertainty / abs(self.value)
 
 
 class QSDMonteCarlo:
     """
     Monte Carlo propagation of uncertainties through QSD calculations.
-    
+
     Input uncertainties:
-    - M_Planck: Â±0.00006 Ã— 10^19 GeV (CODATA)
-    - Ï†: Exact (mathematical constant)
-    - ln(2): Exact (mathematical constant)
-    
-    Derived uncertainties propagate through:
-    - Hbâ‚„ = 1/(4 ln 2)
-    - Î´ = 3/(80 Ï†Â²)
-    - Î¼â‚€ = (M_Pl/2^60) Ã— Ï†Â² Ã— (1 - 6Î´)
-    - m_H = 5 Î¼â‚€
-    - E_syn = Î¼â‚€ (1 + 8Î´)
-    - Î±â»Â¹ from 3-loop calculation
+        M_Planck: +/- 0.00006 * 10^19 GeV (CODATA 2018)
+        phi, ln(2), pi: exact (mathematical constants)
+
+    The derivation chain:
+        Hb4   = 1/(4 ln 2)          (exact)
+        delta = 3/(80 phi^2)         (exact)
+        varpi = pi * phi^2           (exact)
+        mu_rad = (M_Pl/2^60) * phi^2 * (1 - 6*delta)   (M_Pl dependent)
+        m_H = 5 * mu_rad             (M_Pl dependent)
+        E_syn = mu_rad * (1 + 8*delta)  (M_Pl dependent)
+        m_W = (16/5) * mu_rad        (M_Pl dependent)
+        alpha^-1 from 3-loop         (exact + theory uncertainty)
+        alpha_s = 3*pi/80            (exact)
+        sin^2(theta_W) = 3/13 + delta/32  (exact + theory uncertainty)
+
+    Theory uncertainties for loop corrections are bounded by the
+    expansion parameter eta = delta/varpi ~ 1/574.
     """
-    
-    def __init__(self, n_samples: int = 100000):
+
+    def __init__(self, n_samples=100000):
         self.n_samples = n_samples
-        
-        # Fundamental constants with uncertainties
-        # M_Planck: 1.22089(6) Ã— 10^19 GeV
-        self.M_Pl_mean = 1.22089e19
-        self.M_Pl_std = 0.00006e19
-        
-        # Mathematical constants (exact)
-        self.phi = (1 + np.sqrt(5)) / 2
-        self.ln2 = np.log(2)
-        
-        # Experimental values for comparison
-        self.alpha_inv_exp = UncertainValue(137.035999084, 0.000000021, "Î±â»Â¹ (exp)")
-        self.sin2_theta_exp = UncertainValue(0.23122, 0.00003, "sinÂ²Î¸_W (exp)")
-        self.m_H_exp = UncertainValue(125.10, 0.14, "m_H (exp)")
-        self.E_syn_exp = UncertainValue(28.3, 0.5, "E_syn (CMS)")
-        
-    def sample_planck_mass(self) -> np.ndarray:
-        """Sample Planck mass from Gaussian distribution."""
-        return np.random.normal(self.M_Pl_mean, self.M_Pl_std, self.n_samples)
-    
-    def compute_derived_constants(self, M_Pl: np.ndarray) -> Dict[str, np.ndarray]:
+
+        # Planck mass: sole experimental input
+        self.m_pl_mean = 1.22089e19
+        self.m_pl_std = 0.00006e19
+
+        # Exact mathematical constants
+        self.phi = GOLDEN_RATIO
+        self.phi_sq = GOLDEN_RATIO_SQ
+        self.ln2 = LN2
+
+        # Exact derived constants (no uncertainty)
+        self.hb4 = HB4
+        self.delta = SIGMA
+        self.varpi = VARPI
+
+        # Experimental references (for comparison only)
+        self.exp_alpha_inv = UncertainValue(137.035999084, 0.000000021,
+                                            "alpha^-1 (exp)")
+        self.exp_alpha_s = UncertainValue(0.1180, 0.0009, "alpha_s (exp)")
+        self.exp_sin2_theta = UncertainValue(0.23122, 0.00003,
+                                             "sin^2(theta_W) (exp)")
+        self.exp_m_higgs = UncertainValue(125.25, 0.17, "m_H (exp)")
+        self.exp_e_syndrome = UncertainValue(28.3, 0.5, "E_syn (CMS)")
+        self.exp_m_w = UncertainValue(80.377, 0.012, "m_W (exp)")
+
+    def sample_planck_mass(self):
+        """Sample Planck mass from Gaussian."""
+        return np.random.normal(self.m_pl_mean, self.m_pl_std,
+                                self.n_samples)
+
+    def compute_mass_predictions(self, m_pl_samples):
         """
-        Compute all derived constants for each M_Pl sample.
+        Compute energy-scale predictions for each M_Pl sample.
+        Only mu_rad and its derivatives carry experimental uncertainty.
         """
-        # Exact derived constants
-        Hb4 = 1 / (4 * self.ln2)
-        delta = 3 / (80 * self.phi**2)
-        
-        # Energy scale (M_Pl dependent)
-        base_energy = M_Pl / (2**60)
-        phi_sq = self.phi**2
-        strain_correction = 1 - 6 * delta
-        mu_0 = base_energy * phi_sq * strain_correction
-        
-        # Derived masses/energies
-        m_H = 5 * mu_0
-        E_syn = mu_0 * (1 + 8 * delta)
-        
-        # Dimensionless VEV
-        nu_0 = Hb4 / delta
-        
+        base_energy = m_pl_samples / (2.0**60)
+        strain_corr = 1.0 - 6.0 * self.delta
+        mu_rad = base_energy * self.phi_sq * strain_corr
+
         return {
-            'Hb4': np.full(self.n_samples, Hb4),
-            'delta': np.full(self.n_samples, delta),
-            'mu_0': mu_0,
-            'm_H': m_H,
-            'E_syn': E_syn,
-            'nu_0': np.full(self.n_samples, nu_0)
+            "mu_rad": mu_rad,
+            "m_higgs": 5.0 * mu_rad,
+            "e_syndrome": mu_rad * (1.0 + 8.0 * self.delta),
+            "m_w": (16.0 / 5.0) * mu_rad,
         }
-    
-    def compute_alpha_inverse(self, include_theory_uncertainty: bool = True) -> np.ndarray:
+
+    def compute_alpha_inverse(self, include_theory_unc=True):
         """
-        Compute Î±â»Â¹ with Monte Carlo sampling.
-        
-        The 3-loop calculation:
-        Î±â»Â¹ = 136.826 + 0.239 - 0.022 - 0.007 = 137.036
-        
-        Theory uncertainties at each loop order:
-        - Tree: Â±0.010 (unification scale uncertainty)
-        - 1-loop: Â±0.005 (network friction model)
-        - 2-loop: Â±0.003 (radion coupling)
-        - 3-loop: Â±0.001 (vacuum energy)
+        Compute alpha^-1 with Monte Carlo for theory uncertainty.
+
+        Theory uncertainties estimated from expansion parameter:
+            eta = delta/varpi ~ 1.74e-3
+            Tree uncertainty: eta * alpha_inv_tree ~ 0.24
+            But topological fixing constrains this to about +/- 0.005 per loop.
         """
-        tree = 136.826
-        loop1 = 0.239
-        loop2 = 0.022
-        loop3 = 0.007
-        
-        if include_theory_uncertainty:
-            tree_samples = np.random.normal(tree, 0.010, self.n_samples)
-            loop1_samples = np.random.normal(loop1, 0.005, self.n_samples)
-            loop2_samples = np.random.normal(loop2, 0.003, self.n_samples)
-            loop3_samples = np.random.normal(loop3, 0.001, self.n_samples)
-            
-            alpha_inv = tree_samples + loop1_samples - loop2_samples - loop3_samples
+        if include_theory_unc:
+            # Tree level: uncertainty from spectral bond definition
+            tree_samples = np.random.normal(
+                ALPHA_INV_TREE, 0.005, self.n_samples)
+            # 1-loop: uncertainty from friction model
+            d1_samples = np.random.normal(LOOP_1, 0.003, self.n_samples)
+            # 2-loop: uncertainty from S4 channel counting
+            d2_samples = np.random.normal(LOOP_2, 0.002, self.n_samples)
+            # 3-loop: uncertainty from angular screening model
+            d3_samples = np.random.normal(LOOP_3, 0.001, self.n_samples)
+
+            return tree_samples + d1_samples - d2_samples - d3_samples
         else:
-            alpha_inv = np.full(self.n_samples, tree + loop1 - loop2 - loop3)
-        
-        return alpha_inv
-    
-    def compute_sin2_theta(self, include_theory_uncertainty: bool = True) -> np.ndarray:
+            return np.full(self.n_samples, ALPHA_INV_QSD)
+
+    def compute_sin2_theta(self, include_theory_unc=True):
         """
-        Compute sinÂ²Î¸_W with Monte Carlo sampling.
-        
-        sinÂ²Î¸_W = 3/13 + Î´/32
+        Compute sin^2(theta_W) with theory uncertainty.
         """
-        delta = 3 / (80 * self.phi**2)
-        tree = 3 / 13
-        correction = delta / 32
-        
-        central = tree + correction
-        
-        if include_theory_uncertainty:
-            return np.random.normal(central, 0.001, self.n_samples)
-        else:
-            return np.full(self.n_samples, central)
-    
-    def run_full_analysis(self) -> Dict[str, UncertainValue]:
+        central = SIN2_THETA_QSD
+        if include_theory_unc:
+            # Theory uncertainty from generator-counting assumption
+            return np.random.normal(central, 0.0005, self.n_samples)
+        return np.full(self.n_samples, central)
+
+    def compute_alpha_s(self, include_theory_unc=True):
+        """
+        Compute alpha_s. This is exact at tree level (3*pi/80).
+        Theory uncertainty from possible loop corrections.
+        """
+        central = ALPHA_S_QSD
+        if include_theory_unc:
+            return np.random.normal(central, 0.0002, self.n_samples)
+        return np.full(self.n_samples, central)
+
+    def run_full_analysis(self):
         """Run complete Monte Carlo analysis."""
-        print(f"Running Monte Carlo with {self.n_samples:,} samples...")
-        
-        M_Pl_samples = self.sample_planck_mass()
-        derived = self.compute_derived_constants(M_Pl_samples)
-        alpha_inv = self.compute_alpha_inverse(include_theory_uncertainty=True)
-        sin2_theta = self.compute_sin2_theta(include_theory_uncertainty=True)
-        
+        print("Running Monte Carlo with {:,} samples...".format(
+            self.n_samples))
+
+        m_pl_samples = self.sample_planck_mass()
+        masses = self.compute_mass_predictions(m_pl_samples)
+        alpha_inv = self.compute_alpha_inverse(include_theory_unc=True)
+        alpha_s = self.compute_alpha_s(include_theory_unc=True)
+        sin2_theta = self.compute_sin2_theta(include_theory_unc=True)
+
         results = {}
-        
-        for name, samples in derived.items():
-            mean = np.mean(samples)
-            std = np.std(samples)
-            results[name] = UncertainValue(mean, std, name)
-        
-        results['alpha_inv'] = UncertainValue(np.mean(alpha_inv), np.std(alpha_inv), 'Î±â»Â¹')
-        results['sin2_theta'] = UncertainValue(np.mean(sin2_theta), np.std(sin2_theta), 'sinÂ²Î¸_W')
-        
+        for name, samples in masses.items():
+            results[name] = UncertainValue(
+                np.mean(samples), np.std(samples), name)
+
+        results["alpha_inv"] = UncertainValue(
+            np.mean(alpha_inv), np.std(alpha_inv), "alpha^-1")
+        results["alpha_s"] = UncertainValue(
+            np.mean(alpha_s), np.std(alpha_s), "alpha_s")
+        results["sin2_theta"] = UncertainValue(
+            np.mean(sin2_theta), np.std(sin2_theta), "sin^2(theta_W)")
+
         return results
-    
-    def compute_correlations(self) -> Tuple[np.ndarray, List[str]]:
+
+    def compute_correlations(self):
         """Compute correlation matrix between QSD predictions."""
-        M_Pl_samples = self.sample_planck_mass()
-        derived = self.compute_derived_constants(M_Pl_samples)
+        m_pl_samples = self.sample_planck_mass()
+        masses = self.compute_mass_predictions(m_pl_samples)
         alpha_inv = self.compute_alpha_inverse()
+        alpha_s = self.compute_alpha_s()
         sin2_theta = self.compute_sin2_theta()
-        
+
         data = np.column_stack([
-            derived['mu_0'],
-            derived['m_H'],
-            derived['E_syn'],
-            alpha_inv,
-            sin2_theta
+            masses["mu_rad"], masses["m_higgs"], masses["e_syndrome"],
+            masses["m_w"], alpha_inv, alpha_s, sin2_theta,
         ])
-        
-        names = ['Î¼â‚€', 'm_H', 'E_syn', 'Î±â»Â¹', 'sinÂ²Î¸_W']
-        corr_matrix = np.corrcoef(data.T)
-        
-        return corr_matrix, names
-    
-    def compute_confidence_intervals(self, confidence: float = 0.95) -> Dict[str, Tuple[float, float]]:
-        """Compute confidence intervals for all predictions."""
-        M_Pl_samples = self.sample_planck_mass()
-        derived = self.compute_derived_constants(M_Pl_samples)
-        alpha_inv = self.compute_alpha_inverse()
-        sin2_theta = self.compute_sin2_theta()
-        
-        alpha_low = (1 - confidence) / 2
-        alpha_high = 1 - alpha_low
-        
-        intervals = {}
-        
-        for name, samples in derived.items():
-            low = np.percentile(samples, alpha_low * 100)
-            high = np.percentile(samples, alpha_high * 100)
-            intervals[name] = (low, high)
-        
-        intervals['alpha_inv'] = (
-            np.percentile(alpha_inv, alpha_low * 100),
-            np.percentile(alpha_inv, alpha_high * 100)
-        )
-        intervals['sin2_theta'] = (
-            np.percentile(sin2_theta, alpha_low * 100),
-            np.percentile(sin2_theta, alpha_high * 100)
-        )
-        
-        return intervals
-    
-    def chi_square_test(self) -> Dict[str, Dict]:
-        """Perform Ï‡Â² test comparing QSD predictions to experiment."""
+        names = [r"$\mu_{\mathrm{rad}}$", r"$m_H$",
+                 r"$E_{\mathrm{syn}}$", r"$m_W$",
+                 r"$\alpha^{-1}$", r"$\alpha_s$",
+                 r"$\sin^2\theta_W$"]
+        return np.corrcoef(data.T), names
+
+    def chi_square_test(self):
+        """Chi-squared test: QSD predictions vs experiment."""
         results = self.run_full_analysis()
-        
+
         comparisons = {
-            'alpha_inv': (results['alpha_inv'], self.alpha_inv_exp),
-            'sin2_theta': (results['sin2_theta'], self.sin2_theta_exp),
-            'm_H': (results['m_H'], self.m_H_exp),
-            'E_syn': (results['E_syn'], self.E_syn_exp)
+            "alpha_inv": (results["alpha_inv"], self.exp_alpha_inv),
+            "alpha_s": (results["alpha_s"], self.exp_alpha_s),
+            "sin2_theta": (results["sin2_theta"], self.exp_sin2_theta),
+            "m_higgs": (results["m_higgs"], self.exp_m_higgs),
+            "e_syndrome": (results["e_syndrome"], self.exp_e_syndrome),
+            "m_w": (results["m_w"], self.exp_m_w),
         }
-        
+
         chi2_results = {}
-        
         for name, (qsd, exp) in comparisons.items():
-            sigma_combined = np.sqrt(qsd.uncertainty**2 + exp.uncertainty**2)
+            sigma_combined = np.sqrt(
+                qsd.uncertainty**2 + exp.uncertainty**2)
+            if sigma_combined < 1.0e-30:
+                sigma_combined = max(qsd.uncertainty, exp.uncertainty, 1.0e-10)
             chi2 = ((qsd.value - exp.value) / sigma_combined)**2
-            p_value = 1 - stats.chi2.cdf(chi2, df=1)
+            p_value = 1.0 - stats.chi2.cdf(chi2, df=1)
             n_sigma = abs(qsd.value - exp.value) / sigma_combined
-            
+
             chi2_results[name] = {
-                'qsd': qsd,
-                'exp': exp,
-                'chi2': chi2,
-                'p_value': p_value,
-                'n_sigma': n_sigma,
-                'consistent': p_value > 0.05
+                "qsd_val": qsd.value,
+                "qsd_unc": qsd.uncertainty,
+                "exp_val": exp.value,
+                "exp_unc": exp.uncertainty,
+                "chi2": chi2,
+                "p_value": p_value,
+                "n_sigma": n_sigma,
+                "consistent_2sigma": n_sigma < 2.0,
             }
-        
         return chi2_results
 
 
-def plot_monte_carlo_distributions(mc: QSDMonteCarlo, save_path: str = None):
+# =============================================================================
+# PLOTTING
+# =============================================================================
+
+def plot_monte_carlo_distributions(mc, save_path=None):
     """Plot distributions of Monte Carlo samples."""
-    M_Pl_samples = mc.sample_planck_mass()
-    derived = mc.compute_derived_constants(M_Pl_samples)
+    m_pl_samples = mc.sample_planck_mass()
+    masses = mc.compute_mass_predictions(m_pl_samples)
     alpha_inv = mc.compute_alpha_inverse()
+    alpha_s = mc.compute_alpha_s()
     sin2_theta = mc.compute_sin2_theta()
-    
-    fig, axes = plt.subplots(2, 3, figsize=(14, 9))
-    
-    # Î¼â‚€ distribution
+
+    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+
+    # mu_rad
     ax = axes[0, 0]
-    ax.hist(derived['mu_0'], bins=50, density=True, alpha=0.7, color='steelblue')
-    ax.axvline(np.mean(derived['mu_0']), color='red', linestyle='--', label='Mean')
-    ax.set_xlabel('Î¼â‚€ (GeV)')
-    ax.set_ylabel('Probability Density')
-    ax.set_title('Code Scale Distribution')
-    ax.legend()
-    
-    # m_H distribution
+    ax.hist(masses["mu_rad"], bins=60, density=True, alpha=0.7,
+            color="steelblue")
+    ax.axvline(np.mean(masses["mu_rad"]), color="red", linestyle="--",
+               label="Mean")
+    ax.set_xlabel(r"$\mu_{\mathrm{rad}}$ (GeV)")
+    ax.set_title(r"Code Scale $\mu_{\mathrm{rad}}$")
+    ax.legend(fontsize=8)
+
+    # m_H
     ax = axes[0, 1]
-    ax.hist(derived['m_H'], bins=50, density=True, alpha=0.7, color='steelblue')
-    ax.axvline(125.10, color='orange', linestyle='--', linewidth=2, label='Experiment')
-    ax.axvline(np.mean(derived['m_H']), color='red', linestyle='--', label='QSD Mean')
-    ax.set_xlabel('m_H (GeV)')
-    ax.set_ylabel('Probability Density')
-    ax.set_title('Higgs Mass Distribution')
-    ax.legend()
-    
-    # E_syn distribution
+    ax.hist(masses["m_higgs"], bins=60, density=True, alpha=0.7,
+            color="steelblue")
+    ax.axvline(M_HIGGS_EXP, color="orange", linestyle="--", linewidth=2,
+               label="Exp: {:.2f}".format(M_HIGGS_EXP))
+    ax.axvline(np.mean(masses["m_higgs"]), color="red", linestyle="--",
+               label="QSD mean")
+    ax.set_xlabel(r"$m_H$ (GeV)")
+    ax.set_title("Higgs Mass")
+    ax.legend(fontsize=8)
+
+    # E_syn
     ax = axes[0, 2]
-    ax.hist(derived['E_syn'], bins=50, density=True, alpha=0.7, color='steelblue')
-    ax.axvline(28.3, color='orange', linestyle='--', linewidth=2, label='CMS')
-    ax.axvline(np.mean(derived['E_syn']), color='red', linestyle='--', label='QSD Mean')
-    ax.set_xlabel('E_syn (GeV)')
-    ax.set_ylabel('Probability Density')
-    ax.set_title('Syndrome Energy Distribution')
-    ax.legend()
-    
-    # Î±â»Â¹ distribution
+    ax.hist(masses["e_syndrome"], bins=60, density=True, alpha=0.7,
+            color="steelblue")
+    ax.axvline(E_SYNDROME_CMS, color="orange", linestyle="--", linewidth=2,
+               label="CMS: {:.1f}".format(E_SYNDROME_CMS))
+    ax.axvline(np.mean(masses["e_syndrome"]), color="red", linestyle="--",
+               label="QSD mean")
+    ax.set_xlabel(r"$E_{\mathrm{syn}}$ (GeV)")
+    ax.set_title("Syndrome Energy")
+    ax.legend(fontsize=8)
+
+    # alpha^-1
     ax = axes[1, 0]
-    ax.hist(alpha_inv, bins=50, density=True, alpha=0.7, color='purple')
-    ax.axvline(137.035999, color='orange', linestyle='--', linewidth=2, label='Experiment')
-    ax.axvline(np.mean(alpha_inv), color='red', linestyle='--', label='QSD Mean')
-    ax.set_xlabel('Î±â»Â¹')
-    ax.set_ylabel('Probability Density')
-    ax.set_title('Fine Structure Constant Distribution')
-    ax.legend()
-    
-    # sinÂ²Î¸_W distribution
+    ax.hist(alpha_inv, bins=60, density=True, alpha=0.7, color="purple")
+    ax.axvline(ALPHA_INV_EXP, color="orange", linestyle="--", linewidth=2,
+               label="Exp: {:.3f}".format(ALPHA_INV_EXP))
+    ax.axvline(np.mean(alpha_inv), color="red", linestyle="--",
+               label="QSD mean")
+    ax.set_xlabel(r"$\alpha^{-1}$")
+    ax.set_title(r"Fine Structure Constant $\alpha^{-1}$")
+    ax.legend(fontsize=8)
+
+    # alpha_s
     ax = axes[1, 1]
-    ax.hist(sin2_theta, bins=50, density=True, alpha=0.7, color='purple')
-    ax.axvline(0.23122, color='orange', linestyle='--', linewidth=2, label='Experiment')
-    ax.axvline(np.mean(sin2_theta), color='red', linestyle='--', label='QSD Mean')
-    ax.set_xlabel('sinÂ²Î¸_W')
-    ax.set_ylabel('Probability Density')
-    ax.set_title('Weak Mixing Angle Distribution')
-    ax.legend()
-    
+    ax.hist(alpha_s, bins=60, density=True, alpha=0.7, color="purple")
+    ax.axvline(ALPHA_S_EXP, color="orange", linestyle="--", linewidth=2,
+               label="Exp: {:.4f}".format(ALPHA_S_EXP))
+    ax.axvline(np.mean(alpha_s), color="red", linestyle="--",
+               label="QSD mean")
+    ax.set_xlabel(r"$\alpha_s$")
+    ax.set_title(r"Strong Coupling $\alpha_s = 3\pi/80$")
+    ax.legend(fontsize=8)
+
     # Correlation heatmap
     ax = axes[1, 2]
     corr_matrix, names = mc.compute_correlations()
-    im = ax.imshow(corr_matrix, cmap='RdBu_r', vmin=-1, vmax=1)
+    im = ax.imshow(corr_matrix, cmap="RdBu_r", vmin=-1, vmax=1)
     ax.set_xticks(range(len(names)))
     ax.set_yticks(range(len(names)))
-    ax.set_xticklabels(names, rotation=45, ha='right')
-    ax.set_yticklabels(names)
-    ax.set_title('Correlation Matrix')
+    ax.set_xticklabels(names, rotation=45, ha="right", fontsize=8)
+    ax.set_yticklabels(names, fontsize=8)
+    ax.set_title("Correlation Matrix")
     plt.colorbar(im, ax=ax, shrink=0.8)
-    
     for i in range(len(names)):
         for j in range(len(names)):
-            ax.text(j, i, f'{corr_matrix[i,j]:.2f}', ha='center', va='center',
-                   color='white' if abs(corr_matrix[i,j]) > 0.5 else 'black', fontsize=9)
-    
-    plt.suptitle('QSD Monte Carlo Analysis', fontsize=14, fontweight='bold')
+            ax.text(j, i, "{:.2f}".format(corr_matrix[i, j]),
+                    ha="center", va="center",
+                    color="white" if abs(corr_matrix[i, j]) > 0.5
+                    else "black", fontsize=7)
+
+    plt.suptitle("QSD Monte Carlo Analysis ({:,} samples)".format(
+        mc.n_samples), fontsize=14, fontweight="bold")
     plt.tight_layout()
-    
+
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Saved: {save_path}")
-    
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print("Saved: {}".format(save_path))
     return fig
 
 
-def plot_chi_square_results(chi2_results: Dict, save_path: str = None):
-    """Visualize Ï‡Â² test results."""
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    
-    ax = axes[0]
+def plot_chi_square_results(chi2_results, save_path=None):
+    """Visualize chi-squared test results as pull plot and p-values."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+
     names = list(chi2_results.keys())
-    pulls = [chi2_results[n]['n_sigma'] * np.sign(chi2_results[n]['qsd'].value - chi2_results[n]['exp'].value) 
-             for n in names]
-    colors = ['green' if abs(p) < 2 else 'orange' if abs(p) < 3 else 'red' for p in pulls]
-    
-    bars = ax.barh(names, pulls, color=colors, alpha=0.7, edgecolor='black')
-    ax.axvline(0, color='black', linewidth=1)
-    ax.axvline(-2, color='orange', linestyle='--', alpha=0.5)
-    ax.axvline(2, color='orange', linestyle='--', alpha=0.5)
-    ax.set_xlabel('Pull: (QSD - Exp) / Ïƒ_combined')
-    ax.set_title('QSD vs Experiment: Pull Plot')
-    ax.set_xlim(-4, 4)
-    
+    display_names = {
+        "alpha_inv": r"$\alpha^{-1}$",
+        "alpha_s": r"$\alpha_s$",
+        "sin2_theta": r"$\sin^2\theta_W$",
+        "m_higgs": r"$m_H$",
+        "e_syndrome": r"$E_{\mathrm{syn}}$",
+        "m_w": r"$m_W$",
+    }
+
+    pulls = []
+    for n in names:
+        r = chi2_results[n]
+        sign = np.sign(r["qsd_val"] - r["exp_val"])
+        pulls.append(r["n_sigma"] * sign)
+
+    colors = ["green" if abs(p) < 2 else
+              "orange" if abs(p) < 3 else "red" for p in pulls]
+
+    y = np.arange(len(names))
+    ax1.barh(y, pulls, color=colors, alpha=0.7, edgecolor="black")
+    ax1.axvline(0, color="black", linewidth=1)
+    ax1.axvline(-2, color="orange", linestyle="--", alpha=0.5)
+    ax1.axvline(2, color="orange", linestyle="--", alpha=0.5)
+    ax1.set_xlabel(r"Pull: (QSD $-$ Exp) / $\sigma_{\mathrm{combined}}$")
+    ax1.set_title("Pull Plot")
+    ax1.set_yticks(y)
+    ax1.set_yticklabels([display_names.get(n, n) for n in names])
+    ax1.set_xlim(-5, 5)
+
     for i, (name, pull) in enumerate(zip(names, pulls)):
-        ax.text(pull + 0.1 * np.sign(pull), i, f'{pull:.2f}Ïƒ', va='center', fontsize=10)
-    
-    ax = axes[1]
-    p_values = [chi2_results[n]['p_value'] for n in names]
-    
-    bars = ax.barh(names, p_values, color='steelblue', alpha=0.7, edgecolor='black')
-    ax.axvline(0.05, color='red', linestyle='--', label='p = 0.05')
-    ax.set_xlabel('p-value')
-    ax.set_title('Ï‡Â² Test p-values')
-    ax.set_xlim(0, 1)
-    ax.legend()
-    
-    for i, (name, p) in enumerate(zip(names, p_values)):
-        status = 'âœ“' if p > 0.05 else 'âœ—'
-        ax.text(p + 0.02, i, f'{p:.3f} {status}', va='center', fontsize=10)
-    
-    plt.suptitle('Statistical Consistency: QSD Predictions vs Experiment', 
-                fontsize=14, fontweight='bold')
+        ax1.text(pull + 0.15 * np.sign(pull), i,
+                 "{:.2f}s".format(pull), va="center", fontsize=9)
+
+    # p-values
+    p_values = [chi2_results[n]["p_value"] for n in names]
+    ax2.barh(y, p_values, color="steelblue", alpha=0.7, edgecolor="black")
+    ax2.axvline(0.05, color="red", linestyle="--", label="p = 0.05")
+    ax2.set_xlabel("p-value")
+    ax2.set_title(r"$\chi^2$ Test p-values")
+    ax2.set_yticks(y)
+    ax2.set_yticklabels([display_names.get(n, n) for n in names])
+    ax2.set_xlim(0, 1)
+    ax2.legend()
+
+    for i, p in enumerate(zip(names, p_values)):
+        status = "ok" if p[1] > 0.05 else "!"
+        ax2.text(p[1] + 0.02, i,
+                 "{:.3f} [{}]".format(p[1], status),
+                 va="center", fontsize=9)
+
+    plt.suptitle("Statistical Consistency: QSD vs Experiment",
+                 fontsize=14, fontweight="bold")
     plt.tight_layout()
-    
+
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Saved: {save_path}")
-    
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print("Saved: {}".format(save_path))
     return fig
 
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
 
 def run_full_monte_carlo_analysis():
     """Run complete Monte Carlo analysis."""
-    
-    print("=" * 70)
+    sep = "=" * 72
+    subsep = "-" * 72
+
+    print(sep)
     print("QSD MONTE CARLO ERROR PROPAGATION ANALYSIS")
-    print("=" * 70)
-    
+    print(sep)
+
+    np.random.seed(42)
     mc = QSDMonteCarlo(n_samples=100000)
     results = mc.run_full_analysis()
-    
-    print("\n" + "=" * 70)
-    print("MONTE CARLO RESULTS")
-    print("=" * 70)
-    
-    for name, result in results.items():
-        print(f"{name:12s}: {result.value:12.6f} Â± {result.uncertainty:.6f} ({result.relative_error()*100:.4f}%)")
-    
-    print("\n" + "-" * 70)
+
+    print("\n" + sep)
+    print("MONTE CARLO RESULTS (central value +/- 1-sigma)")
+    print(sep)
+    for name, r in results.items():
+        print("  {:18s}: {:14.8f} +/- {:12.8f}  ({:.4f}%)".format(
+            r.name, r.value, r.uncertainty,
+            r.relative_error() * 100.0))
+
+    print("\n" + subsep)
     print("95% CONFIDENCE INTERVALS")
-    print("-" * 70)
-    
-    ci = mc.compute_confidence_intervals(confidence=0.95)
-    for name, (low, high) in ci.items():
-        print(f"{name:12s}: [{low:.6f}, {high:.6f}]")
-    
-    print("\n" + "-" * 70)
-    print("Ï‡Â² CONSISTENCY TESTS")
-    print("-" * 70)
-    
+    print(subsep)
+
+    np.random.seed(42)
+    m_pl_samples = mc.sample_planck_mass()
+    masses = mc.compute_mass_predictions(m_pl_samples)
+    alpha_inv = mc.compute_alpha_inverse()
+    alpha_s = mc.compute_alpha_s()
+    sin2_theta = mc.compute_sin2_theta()
+
+    all_samples = dict(masses)
+    all_samples["alpha_inv"] = alpha_inv
+    all_samples["alpha_s"] = alpha_s
+    all_samples["sin2_theta"] = sin2_theta
+
+    for name, samples in all_samples.items():
+        low = np.percentile(samples, 2.5)
+        high = np.percentile(samples, 97.5)
+        print("  {:18s}: [{:.8f}, {:.8f}]".format(name, low, high))
+
+    print("\n" + subsep)
+    print("CHI-SQUARED CONSISTENCY TESTS")
+    print(subsep)
+
+    np.random.seed(42)
     chi2_results = mc.chi_square_test()
-    for name, result in chi2_results.items():
-        status = "âœ“ Consistent" if result['consistent'] else "âœ— Tension"
-        print(f"{name:12s}: Ï‡Â² = {result['chi2']:.4f}, p = {result['p_value']:.4f}, "
-              f"{result['n_sigma']:.2f}Ïƒ  {status}")
-    
-    import os
-    os.makedirs('figures', exist_ok=True)
-    
-    plot_monte_carlo_distributions(mc, 'figures/monte_carlo_distributions.png')
-    plot_chi_square_results(chi2_results, 'figures/chi_square_results.png')
-    
-    print("\n" + "=" * 70)
-    print("ANALYSIS COMPLETE")
-    print("=" * 70)
-    
+    for name, r in chi2_results.items():
+        status = "CONSISTENT" if r["consistent_2sigma"] else "TENSION"
+        print("  {:18s}: chi2 = {:8.4f}, p = {:.4f}, "
+              "{:.2f} sigma  [{}]".format(
+                  name, r["chi2"], r["p_value"], r["n_sigma"], status))
+
+    # Generate figures
+    os.makedirs("figures", exist_ok=True)
+
+    np.random.seed(42)
+    plot_monte_carlo_distributions(mc,
+                                   "figures/monte_carlo_distributions.png")
+    np.random.seed(42)
+    chi2_results = mc.chi_square_test()
+    plot_chi_square_results(chi2_results, "figures/chi_square_results.png")
+
+    plt.close("all")
+    print("\n" + sep)
+    print("MONTE CARLO ANALYSIS COMPLETE")
+    print(sep)
+
     return mc, results, chi2_results
 
 

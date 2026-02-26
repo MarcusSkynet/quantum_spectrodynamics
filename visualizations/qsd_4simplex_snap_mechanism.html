@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QSD Snap Mechanism: Anchor Decoupling</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #030308;
+    color: #e0ddd5;
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+  }
+
+  #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  canvas { display: block; }
+
+  .overlay { position: absolute; pointer-events: none; z-index: 10; }
+
+  .title-block { top: 24px; left: 32px; }
+  .title-block h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px; font-weight: 600;
+    color: #f0ece4; line-height: 1.1;
+  }
+  .title-block .subtitle {
+    font-size: 10px; font-weight: 300; color: #7a7668;
+    margin-top: 6px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .phase-display {
+    top: 24px; right: 32px; text-align: right;
+    transition: opacity 0.4s;
+  }
+  .phase-label {
+    font-size: 9px; color: #7a7668;
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .phase-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px; font-weight: 600; line-height: 1;
+    transition: color 0.5s;
+  }
+  .phase-desc {
+    font-size: 11px; color: #7a7668; margin-top: 4px;
+    max-width: 240px; text-align: right; line-height: 1.5;
+  }
+
+  .energy-panel {
+    bottom: 24px; left: 32px;
+    background: rgba(3, 3, 8, 0.8);
+    border: 1px solid rgba(120, 110, 90, 0.2);
+    border-radius: 2px; padding: 14px 18px;
+    backdrop-filter: blur(8px); min-width: 280px;
+  }
+  .info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 3px 0; font-size: 11px; font-weight: 300;
+  }
+  .info-label { color: #7a7668; letter-spacing: 0.06em; }
+  .info-value { font-weight: 500; }
+  .info-value.syn { color: #e8c84a; }
+  .info-value.rad { color: #4a9ee8; }
+  .info-value.bind { color: #e85d4a; }
+  .info-value.code { color: #c9a84c; }
+
+  .energy-bar-container {
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid rgba(120, 110, 90, 0.1);
+  }
+  .energy-bar-label {
+    font-size: 9px; color: #5a5448; letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .energy-bar-track {
+    height: 14px; background: rgba(120, 110, 90, 0.08);
+    border-radius: 2px; position: relative; overflow: hidden;
+  }
+  .energy-bar-radion {
+    position: absolute; left: 0; top: 0; height: 100%;
+    background: rgba(74, 158, 232, 0.5);
+    border-radius: 2px 0 0 2px;
+    transition: width 0.8s ease;
+    width: 0%;
+  }
+  .energy-bar-binding {
+    position: absolute; top: 0; height: 100%;
+    background: rgba(232, 93, 74, 0.5);
+    border-radius: 0 2px 2px 0;
+    transition: width 0.8s ease, left 0.8s ease;
+    width: 0%; left: 0%;
+  }
+
+  .controls {
+    bottom: 24px; right: 32px;
+    pointer-events: all; display: flex; gap: 8px; align-items: center;
+  }
+  .ctrl-btn {
+    height: 34px; padding: 0 14px;
+    border: 1px solid rgba(120, 110, 90, 0.25); border-radius: 2px;
+    background: rgba(3, 3, 8, 0.7); color: #9a8e7a;
+    font-size: 11px; font-family: inherit; letter-spacing: 0.04em;
+    cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ctrl-btn:hover { border-color: #c9a84c; color: #c9a84c; }
+  .ctrl-btn.active { border-color: #e85d4a; color: #e85d4a; background: rgba(232, 93, 74, 0.08); }
+
+  .timeline {
+    bottom: 80px; left: 32px; right: 32px;
+    display: flex; align-items: center; gap: 0;
+    pointer-events: all;
+  }
+  .tl-segment {
+    flex: 1; height: 3px; background: rgba(120, 110, 90, 0.12);
+    position: relative; cursor: pointer; transition: background 0.3s;
+  }
+  .tl-segment.past { background: rgba(74, 158, 232, 0.3); }
+  .tl-segment.current { background: rgba(232, 200, 74, 0.5); }
+  .tl-segment::after {
+    content: attr(data-label);
+    position: absolute; top: -18px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px; color: #5a5448; letter-spacing: 0.06em;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .tl-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: rgba(120, 110, 90, 0.2); border: 1.5px solid rgba(120, 110, 90, 0.3);
+    flex-shrink: 0; cursor: pointer; transition: all 0.3s; z-index: 1;
+  }
+  .tl-dot.reached { background: rgba(74, 158, 232, 0.4); border-color: rgba(74, 158, 232, 0.6); }
+  .tl-dot.active { background: rgba(232, 200, 74, 0.6); border-color: #e8c84a; box-shadow: 0 0 8px rgba(232, 200, 74, 0.3); }
+
+  .structure-label {
+    top: 50%; left: 32px; transform: translateY(-50%);
+    font-size: 9px; color: #5a5448; letter-spacing: 0.1em;
+    text-transform: uppercase; writing-mode: vertical-lr;
+    text-orientation: mixed;
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div class="overlay title-block">
+  <h1>The Snap</h1>
+  <div class="subtitle">Anchor Decoupling · Syndrome Energy Release · E<sub>syn</sub> = 28.24 GeV</div>
+</div>
+
+<div class="overlay phase-display">
+  <div class="phase-label">Current Phase</div>
+  <div class="phase-name" id="phase-name" style="color:#4a9ee8">Active Code</div>
+  <div class="phase-desc" id="phase-desc">[[5,1,3]] code running. K₅ fully connected. C₅ rotation = flow of time.</div>
+</div>
+
+<div class="overlay energy-panel">
+  <div class="info-row">
+    <span class="info-label">Pre-snap</span>
+    <span class="info-value code">K₅ → [[5,1,3]]</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Post-snap</span>
+    <span class="info-value code">K₄ + W-bit</span>
+  </div>
+  <div class="info-row" style="margin-top:4px; padding-top:6px; border-top:1px solid rgba(120,110,90,0.1)">
+    <span class="info-label">E<sub>syn</sub></span>
+    <span class="info-value syn" id="esyn-val">—</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Radion mass μ₀</span>
+    <span class="info-value rad" id="mu-val">25.34 GeV (89.7%)</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Binding 8ςμ₀</span>
+    <span class="info-value bind" id="bind-val">2.90 GeV (10.3%)</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Bonds severed</span>
+    <span class="info-value" id="bonds-val">0 / 4</span>
+  </div>
+  <div class="energy-bar-container">
+    <div class="energy-bar-label">Energy decomposition</div>
+    <div class="energy-bar-track">
+      <div class="energy-bar-radion" id="bar-radion"></div>
+      <div class="energy-bar-binding" id="bar-binding"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Timeline -->
+<div class="overlay timeline" id="timeline">
+  <div class="tl-dot active" data-phase="0"></div>
+  <div class="tl-segment" data-label="Active"></div>
+  <div class="tl-dot" data-phase="1"></div>
+  <div class="tl-segment" data-label="Error"></div>
+  <div class="tl-dot" data-phase="2"></div>
+  <div class="tl-segment" data-label="Snap"></div>
+  <div class="tl-dot" data-phase="3"></div>
+  <div class="tl-segment" data-label="Release"></div>
+  <div class="tl-dot" data-phase="4"></div>
+</div>
+
+<div class="overlay controls">
+  <button class="ctrl-btn" id="btn-auto" onclick="toggleAuto()">Auto ▶</button>
+  <button class="ctrl-btn" id="btn-step" onclick="stepForward()">Step →</button>
+  <button class="ctrl-btn" id="btn-reset" onclick="resetSnap()">Reset ↺</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+
+  // ═══════════════════════════════════════════════════════
+  // PHYSICS CONSTANTS
+  // ═══════════════════════════════════════════════════════
+  const MU_RAD = 25.34;   // GeV
+  const DELTA  = 0.01432;
+  const E_BIND = 8 * DELTA * MU_RAD; // 2.90 GeV
+  const E_SYN  = MU_RAD * (1 + 8 * DELTA); // 28.24 GeV
+
+  // ═══════════════════════════════════════════════════════
+  // PHASE DEFINITIONS
+  // ═══════════════════════════════════════════════════════
+  // 0: Active (rotating K₅)
+  // 1: Error detected (stress builds)
+  // 2: The Snap (anchor rips out)
+  // 3: Release (syndrome energy radiates)
+  // 4: Archive (static K₄ + W-bit)
+
+  const PHASE_INFO = [
+    { name: 'Active Code', color: '#4a9ee8',
+      desc: '[[5,1,3]] code running. K₅ fully connected. C₅ rotation = flow of time.' },
+    { name: 'Error Detected', color: '#e8c84a',
+      desc: 'Local perturbation creates single-qubit error. Stabilizers measure nonzero syndrome s ≠ 0.' },
+    { name: 'The Snap', color: '#e85d4a',
+      desc: 'Anchor decouples from bulk. 4 bonds sever. K₅ → K₄ + W-bit.' },
+    { name: 'Energy Release', color: '#e8c84a',
+      desc: 'Syndrome energy E_syn = μ₀(1 + 8ς) = 28.24 GeV radiated. Radion mass + binding energy.' },
+    { name: 'Static Archive', color: '#7a7668',
+      desc: 'K₄ bulk frozen. W-bit stores classical record. Rotation (time) has ceased for this block.' },
+  ];
+
+  // Phase durations in seconds (auto mode)
+  const PHASE_DURATIONS = [5, 2.5, 2, 3, Infinity];
+
+  // ═══════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════
+  let currentPhase = 0;
+  let phaseTime = 0;      // time within current phase
+  let theta = 0;           // 4D rotation angle
+  let autoMode = false;
+  let snapProgress = 0;    // 0→1 during phase 2
+  let releaseProgress = 0; // 0→1 during phase 3
+
+  // Anchor separation state
+  let anchorOffset = new THREE.Vector3(0, 0, 0);
+  let anchorDrift = new THREE.Vector3(0, 1, 0).normalize();
+  let bondOpacities = [1, 1, 1, 1];
+
+  // Syndrome particles
+  const syndromeParticles = [];
+
+  // ═══════════════════════════════════════════════════════
+  // THREE.JS SETUP
+  // ═══════════════════════════════════════════════════════
+  const container = document.getElementById('canvas-container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x030308);
+  scene.fog = new THREE.FogExp2(0x030308, 0.04);
+
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0.5, 6);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0x404040, 0.5));
+  const dirLight = new THREE.DirectionalLight(0xfff5e6, 0.8);
+  dirLight.position.set(5, 5, 5);
+  scene.add(dirLight);
+
+  // Stars
+  const starGeo = new THREE.BufferGeometry();
+  const starPos = new Float32Array(900);
+  for (let i = 0; i < 900; i++) starPos[i] = (Math.random() - 0.5) * 50;
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x2a2820, size: 0.03, sizeAttenuation: true })));
+
+  // ═══════════════════════════════════════════════════════
+  // 4-SIMPLEX GEOMETRY
+  // ═══════════════════════════════════════════════════════
+  const BASE_4D = [];
+  for (let k = 0; k < 5; k++) {
+    const a1 = 2 * Math.PI * k / 5;
+    const a2 = 4 * Math.PI * k / 5;
+    BASE_4D.push([Math.cos(a1), Math.sin(a1), Math.cos(a2), Math.sin(a2)]);
+  }
+
+  const K5_EDGES = [];
+  for (let i = 0; i < 5; i++)
+    for (let j = i + 1; j < 5; j++)
+      K5_EDGES.push([i, j]);
+
+  // Identify which edges connect to anchor (node with lowest w)
+  // This is dynamic, so we track per-frame
+
+  function project4Dto3D(v4, angle) {
+    const c1 = Math.cos(angle), s1 = Math.sin(angle);
+    const c2 = Math.cos(2 * angle), s2 = Math.sin(2 * angle);
+    const x1 = v4[0]*c1 - v4[1]*s1;
+    const y1 = v4[0]*s1 + v4[1]*c1;
+    const x2 = v4[2]*c2 - v4[3]*s2;
+    const y2 = v4[2]*s2 + v4[3]*c2;
+    const perspDist = 4.5;
+    const scale = perspDist / (perspDist - y2 * 0.5);
+    return { x: x1*scale*1.5, y: x2*scale*1.5, z: y1*scale*1.5, w: y2, scale };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // SCENE OBJECTS
+  // ═══════════════════════════════════════════════════════
+
+  // Nodes
+  const BULK_COLOR = 0x4a9ee8;
+  const ANCHOR_COLOR = 0xe85d4a;
+  const STRESS_COLOR = 0xe8c84a;
+  const FROZEN_COLOR = 0x5a6a8a;
+  const WBIT_COLOR = 0x9a7a5a;
+
+  const nodeMeshes = [];
+  const nodeGlows = [];
+
+  for (let i = 0; i < 5; i++) {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.11, 32, 32),
+      new THREE.MeshPhongMaterial({ color: BULK_COLOR, emissive: BULK_COLOR, emissiveIntensity: 0.3, shininess: 80 })
+    );
+    scene.add(mesh);
+    nodeMeshes.push(mesh);
+
+    const glow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.2, 16, 16),
+      new THREE.MeshBasicMaterial({ color: BULK_COLOR, transparent: true, opacity: 0.08, side: THREE.BackSide })
+    );
+    scene.add(glow);
+    nodeGlows.push(glow);
+  }
+
+  // Edges
+  const edgeLines = [];
+  const edgeMaterials = [];
+  for (let e = 0; e < K5_EDGES.length; e++) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    const mat = new THREE.LineBasicMaterial({ color: 0x2a5a8a, transparent: true, opacity: 0.35 });
+    const line = new THREE.Line(geo, mat);
+    scene.add(line);
+    edgeLines.push(line);
+    edgeMaterials.push(mat);
+  }
+
+  // Syndrome particles (created on snap)
+  const PARTICLE_COUNT = 60;
+  const particleMeshes = [];
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.025, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xe8c84a, transparent: true, opacity: 0 })
+    );
+    scene.add(mesh);
+    particleMeshes.push(mesh);
+    syndromeParticles.push({
+      mesh,
+      velocity: new THREE.Vector3(),
+      origin: new THREE.Vector3(),
+      alive: false,
+      age: 0,
+    });
+  }
+
+  // Flash sphere (for snap moment)
+  const flashMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 32, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffeedd, transparent: true, opacity: 0, side: THREE.DoubleSide })
+  );
+  scene.add(flashMesh);
+
+  // "W-bit" label ring (appears post-snap around anchor)
+  const wbitRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.22, 0.26, 32),
+    new THREE.MeshBasicMaterial({ color: WBIT_COLOR, transparent: true, opacity: 0, side: THREE.DoubleSide })
+  );
+  scene.add(wbitRing);
+
+  // ═══════════════════════════════════════════════════════
+  // CAMERA ORBIT
+  // ═══════════════════════════════════════════════════════
+  let isDragging = false, prevMouse = { x: 0, y: 0 };
+  let camAngleX = 0, camAngleY = 0.1;
+
+  renderer.domElement.addEventListener('mousedown', (e) => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+  window.addEventListener('mouseup', () => { isDragging = false; });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    camAngleX += (e.clientX - prevMouse.x) * 0.005;
+    camAngleY = Math.max(-1.2, Math.min(1.2, camAngleY + (e.clientY - prevMouse.y) * 0.005));
+    prevMouse = { x: e.clientX, y: e.clientY };
+  });
+  renderer.domElement.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) { isDragging = true; prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }
+  }, { passive: true });
+  window.addEventListener('touchend', () => { isDragging = false; });
+  window.addEventListener('touchmove', (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    camAngleX += (e.touches[0].clientX - prevMouse.x) * 0.005;
+    camAngleY = Math.max(-1.2, Math.min(1.2, camAngleY + (e.touches[0].clientY - prevMouse.y) * 0.005));
+    prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+
+  // ═══════════════════════════════════════════════════════
+  // CONTROLS
+  // ═══════════════════════════════════════════════════════
+  window.toggleAuto = function() {
+    autoMode = !autoMode;
+    document.getElementById('btn-auto').classList.toggle('active', autoMode);
+    document.getElementById('btn-auto').textContent = autoMode ? 'Auto ⏸' : 'Auto ▶';
+  };
+
+  window.stepForward = function() {
+    if (currentPhase < 4) {
+      setPhase(currentPhase + 1);
+    }
+  };
+
+  window.resetSnap = function() {
+    setPhase(0);
+    theta = 0;
+    snapProgress = 0;
+    releaseProgress = 0;
+    anchorOffset.set(0, 0, 0);
+    bondOpacities = [1, 1, 1, 1];
+    for (const p of syndromeParticles) { p.alive = false; p.mesh.material.opacity = 0; }
+    flashMesh.material.opacity = 0;
+    wbitRing.material.opacity = 0;
+  };
+
+  function setPhase(p) {
+    currentPhase = p;
+    phaseTime = 0;
+    if (p === 2) { snapProgress = 0; initSnap(); }
+    if (p === 3) { releaseProgress = 0; spawnParticles(); }
+    updateUI();
+  }
+
+  // Timeline clicks
+  document.querySelectorAll('.tl-dot').forEach(dot => {
+    dot.style.pointerEvents = 'all';
+    dot.addEventListener('click', () => {
+      const target = parseInt(dot.dataset.phase);
+      // Reset everything then fast-forward
+      resetSnap();
+      // Set phases up to target instantly
+      if (target >= 2) { initSnap(); snapProgress = 1; applySnapFinal(); }
+      if (target >= 3) { spawnParticles(); releaseProgress = 1; }
+      currentPhase = target;
+      phaseTime = 0;
+      updateUI();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════
+  // SNAP LOGIC
+  // ═══════════════════════════════════════════════════════
+
+  let frozenAnchor = 0; // which node is anchor at snap time
+  let frozenPositions = []; // bulk node positions frozen at snap
+
+  function initSnap() {
+    // Determine current anchor (deepest w)
+    const proj = BASE_4D.map(v => project4Dto3D(v, theta));
+    let minW = Infinity;
+    for (let i = 0; i < 5; i++) { if (proj[i].w < minW) { minW = proj[i].w; frozenAnchor = i; } }
+
+    // Pick a drift direction (away from center of bulk nodes)
+    const bulkCenter = new THREE.Vector3();
+    let count = 0;
+    for (let i = 0; i < 5; i++) {
+      if (i === frozenAnchor) continue;
+      bulkCenter.add(new THREE.Vector3(proj[i].x, proj[i].y, proj[i].z));
+      count++;
+    }
+    bulkCenter.divideScalar(count);
+    const anchorPos3 = new THREE.Vector3(proj[frozenAnchor].x, proj[frozenAnchor].y, proj[frozenAnchor].z);
+    anchorDrift = anchorPos3.clone().sub(bulkCenter).normalize();
+    // Bias upward slightly for visual clarity
+    anchorDrift.y += 0.5;
+    anchorDrift.normalize();
+  }
+
+  function applySnapFinal() {
+    anchorOffset.copy(anchorDrift.clone().multiplyScalar(3.0));
+    bondOpacities = [0, 0, 0, 0];
+  }
+
+  function spawnParticles() {
+    // Spawn from the anchor position
+    const anchorWorldPos = nodeMeshes[frozenAnchor].position.clone();
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const p = syndromeParticles[i];
+      p.alive = true;
+      p.age = 0;
+      p.origin.copy(anchorWorldPos);
+      p.mesh.position.copy(anchorWorldPos);
+      // Radial burst, biased away from anchor drift
+      const dir = new THREE.Vector3(
+        (Math.random() - 0.5) * 2,
+        (Math.random() - 0.5) * 2,
+        (Math.random() - 0.5) * 2
+      ).normalize();
+      // Some particles follow anchor bonds direction, some are random
+      if (i < 16) {
+        // Follow the 4 bond directions (4 particles each)
+        const bondIdx = Math.floor(i / 4);
+        let bulkIdx = 0, bCount = 0;
+        for (let j = 0; j < 5; j++) {
+          if (j === frozenAnchor) continue;
+          if (bCount === bondIdx) { bulkIdx = j; break; }
+          bCount++;
+        }
+        const bulkPos = nodeMeshes[bulkIdx].position.clone();
+        dir.copy(anchorWorldPos).sub(bulkPos).normalize();
+        dir.x += (Math.random() - 0.5) * 0.5;
+        dir.y += (Math.random() - 0.5) * 0.5;
+        dir.z += (Math.random() - 0.5) * 0.5;
+        dir.normalize();
+      }
+      const speed = 1.5 + Math.random() * 3;
+      p.velocity.copy(dir).multiplyScalar(speed);
+      p.mesh.material.opacity = 0;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // UI UPDATE
+  // ═══════════════════════════════════════════════════════
+
+  function updateUI() {
+    const info = PHASE_INFO[currentPhase];
+    document.getElementById('phase-name').textContent = info.name;
+    document.getElementById('phase-name').style.color = info.color;
+    document.getElementById('phase-desc').textContent = info.desc;
+
+    // Timeline dots
+    document.querySelectorAll('.tl-dot').forEach(dot => {
+      const p = parseInt(dot.dataset.phase);
+      dot.classList.toggle('active', p === currentPhase);
+      dot.classList.toggle('reached', p < currentPhase);
+    });
+    document.querySelectorAll('.tl-segment').forEach((seg, i) => {
+      seg.classList.toggle('past', i < currentPhase);
+      seg.classList.toggle('current', i === currentPhase);
+    });
+
+    // Energy values
+    const showEnergy = currentPhase >= 3;
+    document.getElementById('esyn-val').textContent = showEnergy ? `${E_SYN.toFixed(2)} GeV` : '—';
+
+    // Bars
+    document.getElementById('bar-radion').style.width = showEnergy ? '89.7%' : '0%';
+    document.getElementById('bar-binding').style.width = showEnergy ? '10.3%' : '0%';
+    document.getElementById('bar-binding').style.left = showEnergy ? '89.7%' : '0%';
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ANIMATION LOOP
+  // ═══════════════════════════════════════════════════════
+
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    phaseTime += dt;
+
+    // Auto-advance
+    if (autoMode && currentPhase < 4 && phaseTime >= PHASE_DURATIONS[currentPhase]) {
+      setPhase(currentPhase + 1);
+    }
+
+    // ─── PHASE-DEPENDENT ROTATION SPEED ──────────────
+    let rotSpeed = 0;
+    if (currentPhase === 0) rotSpeed = 0.4;
+    else if (currentPhase === 1) rotSpeed = 0.4 + phaseTime * 0.3; // accelerates slightly under stress
+    else if (currentPhase === 2) rotSpeed = 0.6 * Math.max(0, 1 - snapProgress * 2); // decelerating
+    // phase 3,4: no rotation (time stopped)
+    theta += dt * rotSpeed;
+
+    // ─── SNAP PROGRESS ───────────────────────────────
+    if (currentPhase === 2) {
+      snapProgress = Math.min(1, phaseTime / PHASE_DURATIONS[2]);
+      const eased = 1 - Math.pow(1 - snapProgress, 3); // ease-out cubic
+      anchorOffset.copy(anchorDrift.clone().multiplyScalar(eased * 3.0));
+
+      // Stagger bond breaking
+      for (let b = 0; b < 4; b++) {
+        const breakTime = 0.1 + b * 0.15;
+        bondOpacities[b] = Math.max(0, 1 - Math.max(0, (snapProgress - breakTime) / 0.15));
+      }
+    }
+
+    // ─── RELEASE PROGRESS ────────────────────────────
+    if (currentPhase === 3) {
+      releaseProgress = Math.min(1, phaseTime / PHASE_DURATIONS[3]);
+    }
+
+    // ─── PROJECT VERTICES ────────────────────────────
+    const proj = BASE_4D.map(v => project4Dto3D(v, theta));
+
+    // Find anchor (deepest w) — frozen after snap
+    let anchor = frozenAnchor;
+    if (currentPhase < 2) {
+      let minW = Infinity;
+      for (let i = 0; i < 5; i++) { if (proj[i].w < minW) { minW = proj[i].w; anchor = i; } }
+      frozenAnchor = anchor;
+    }
+
+    let minW = Infinity, maxW = -Infinity;
+    for (let i = 0; i < 5; i++) {
+      if (proj[i].w < minW) minW = proj[i].w;
+      if (proj[i].w > maxW) maxW = proj[i].w;
+    }
+
+    // ─── UPDATE NODES ────────────────────────────────
+    for (let i = 0; i < 5; i++) {
+      const p = proj[i];
+      let pos = new THREE.Vector3(p.x, p.y, p.z);
+
+      const isAnchor = (i === frozenAnchor);
+
+      // Apply anchor offset post-snap
+      if (isAnchor && currentPhase >= 2) {
+        pos.add(anchorOffset);
+      }
+
+      nodeMeshes[i].position.copy(pos);
+      nodeGlows[i].position.copy(pos);
+
+      // Sizing
+      const wNorm = (p.w - minW) / (maxW - minW + 0.001);
+      let radius = 0.09 + wNorm * 0.05;
+
+      // Color logic per phase
+      let targetColor;
+      if (currentPhase === 0) {
+        targetColor = isAnchor ? ANCHOR_COLOR : BULK_COLOR;
+        if (isAnchor) radius += 0.03 + 0.015 * Math.sin(theta * 5);
+      } else if (currentPhase === 1) {
+        // Stress: anchor turns yellow, pulses harder
+        if (isAnchor) {
+          targetColor = STRESS_COLOR;
+          radius += 0.04 + 0.03 * Math.sin(phaseTime * 12);
+        } else {
+          // Bulk nodes flicker
+          const flicker = 0.5 + 0.5 * Math.sin(phaseTime * 8 + i * 1.5);
+          targetColor = new THREE.Color(BULK_COLOR).lerp(new THREE.Color(STRESS_COLOR), flicker * 0.3).getHex();
+        }
+      } else if (currentPhase >= 2) {
+        if (isAnchor) {
+          // Transitioning to W-bit (dimming classical record)
+          const dimFactor = currentPhase >= 4 ? 0.5 : 1;
+          targetColor = currentPhase >= 3 ? WBIT_COLOR : ANCHOR_COLOR;
+          radius = 0.11 * dimFactor;
+        } else {
+          // Bulk freezes to cold blue after snap
+          const freezeT = currentPhase >= 3 ? 1 : snapProgress;
+          targetColor = new THREE.Color(BULK_COLOR).lerp(new THREE.Color(FROZEN_COLOR), freezeT * 0.6).getHex();
+        }
+      }
+
+      if (typeof targetColor === 'number') {
+        nodeMeshes[i].material.color.lerp(new THREE.Color(targetColor), 0.12);
+        nodeMeshes[i].material.emissive.lerp(new THREE.Color(targetColor), 0.12);
+      }
+
+      nodeMeshes[i].scale.setScalar(radius / 0.11);
+      nodeGlows[i].scale.setScalar((radius + 0.08) / 0.2);
+
+      const emInt = (isAnchor && currentPhase <= 1) ? 0.5 : (currentPhase >= 4 ? 0.1 : 0.25);
+      nodeMeshes[i].material.emissiveIntensity += (emInt - nodeMeshes[i].material.emissiveIntensity) * 0.1;
+
+      const glowOp = (isAnchor && currentPhase === 1) ? 0.2 + 0.1 * Math.sin(phaseTime * 10) :
+                     (currentPhase >= 4 ? 0.03 : 0.06);
+      nodeGlows[i].material.opacity += (glowOp - nodeGlows[i].material.opacity) * 0.1;
+    }
+
+    // ─── UPDATE EDGES ────────────────────────────────
+    let bondCount = 0;
+    for (let e = 0; e < K5_EDGES.length; e++) {
+      const [i, j] = K5_EDGES[e];
+      const pi = nodeMeshes[i].position;
+      const pj = nodeMeshes[j].position;
+      const arr = edgeLines[e].geometry.attributes.position.array;
+      arr[0] = pi.x; arr[1] = pi.y; arr[2] = pi.z;
+      arr[3] = pj.x; arr[4] = pj.y; arr[5] = pj.z;
+      edgeLines[e].geometry.attributes.position.needsUpdate = true;
+
+      const isAnchorEdge = (i === frozenAnchor || j === frozenAnchor);
+
+      if (currentPhase < 2) {
+        // Normal coloring
+        const tgtColor = isAnchorEdge ? 0x6a3a2a : 0x2a5a8a;
+        edgeMaterials[e].color.lerp(new THREE.Color(tgtColor), 0.1);
+        let op = isAnchorEdge ? 0.45 : 0.25;
+        if (currentPhase === 1 && isAnchorEdge) {
+          // Vibrate anchor bonds
+          op = 0.3 + 0.4 * Math.abs(Math.sin(phaseTime * 15 + e));
+          edgeMaterials[e].color.lerp(new THREE.Color(STRESS_COLOR), 0.3);
+        }
+        edgeMaterials[e].opacity += (op - edgeMaterials[e].opacity) * 0.15;
+      } else {
+        // Post-snap
+        if (isAnchorEdge) {
+          // Find which bond index this is (0-3)
+          let bIdx = 0, bCount = 0;
+          for (let n = 0; n < 5; n++) {
+            if (n === frozenAnchor) continue;
+            if (n === i || n === j) { bIdx = bCount; break; }
+            bCount++;
+          }
+          const op = bondOpacities[bIdx] * 0.5;
+          edgeMaterials[e].opacity += (op - edgeMaterials[e].opacity) * 0.15;
+          edgeMaterials[e].color.lerp(new THREE.Color(0xe85d4a), 0.1);
+          if (bondOpacities[bIdx] < 0.01) bondCount++;
+        } else {
+          // Bulk edges: remain but cool down
+          const freezeOp = currentPhase >= 4 ? 0.15 : 0.25;
+          edgeMaterials[e].opacity += (freezeOp - edgeMaterials[e].opacity) * 0.08;
+          edgeMaterials[e].color.lerp(new THREE.Color(FROZEN_COLOR), 0.05);
+        }
+      }
+    }
+
+    // Bonds count for UI
+    document.getElementById('bonds-val').textContent = currentPhase >= 2 ?
+      `${Math.min(4, bondCount)} / 4 severed` : '0 / 4';
+
+    // ─── FLASH ───────────────────────────────────────
+    if (currentPhase === 2 && snapProgress < 0.3) {
+      const anchorPos = nodeMeshes[frozenAnchor].position;
+      flashMesh.position.copy(anchorPos);
+      const flashT = snapProgress / 0.3;
+      flashMesh.material.opacity = Math.max(0, 0.7 * (1 - flashT));
+      flashMesh.scale.setScalar(1 + flashT * 4);
+    } else {
+      flashMesh.material.opacity *= 0.9;
+    }
+
+    // ─── SYNDROME PARTICLES ──────────────────────────
+    for (const p of syndromeParticles) {
+      if (!p.alive) continue;
+      p.age += dt;
+      p.mesh.position.add(p.velocity.clone().multiplyScalar(dt));
+      // Decelerate
+      p.velocity.multiplyScalar(0.98);
+
+      // Fade in then out
+      const life = 3.0;
+      const t = p.age / life;
+      if (t < 0.15) {
+        p.mesh.material.opacity = t / 0.15;
+      } else if (t < 0.6) {
+        p.mesh.material.opacity = 1.0;
+      } else if (t < 1.0) {
+        p.mesh.material.opacity = 1 - (t - 0.6) / 0.4;
+      } else {
+        p.mesh.material.opacity = 0;
+        p.alive = false;
+      }
+
+      // Color: start golden-white, fade to warm yellow
+      const warmth = Math.min(1, p.age * 0.5);
+      p.mesh.material.color.setRGB(1, 0.85 - warmth * 0.2, 0.3 + warmth * 0.1);
+    }
+
+    // ─── W-BIT RING ──────────────────────────────────
+    if (currentPhase >= 3) {
+      const anchorPos = nodeMeshes[frozenAnchor].position;
+      wbitRing.position.copy(anchorPos);
+      wbitRing.lookAt(camera.position);
+      const targetOp = currentPhase >= 4 ? 0.35 : releaseProgress * 0.35;
+      wbitRing.material.opacity += (targetOp - wbitRing.material.opacity) * 0.05;
+      wbitRing.rotation.z += dt * 0.3;
+    }
+
+    // ─── CAMERA ──────────────────────────────────────
+    const camDist = 6;
+    camera.position.x = camDist * Math.sin(camAngleX) * Math.cos(camAngleY);
+    camera.position.y = camDist * Math.sin(camAngleY);
+    camera.position.z = camDist * Math.cos(camAngleX) * Math.cos(camAngleY);
+    camera.lookAt(0, 0, 0);
+
+    renderer.render(scene, camera);
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // INIT
+  // ═══════════════════════════════════════════════════════
+  updateUI();
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  animate();
+})();
+</script>
+</body>
+</html>

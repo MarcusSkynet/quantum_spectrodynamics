@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QSD Tensor Network: 4 Code Blocks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #030308;
+    color: #e0ddd5;
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #canvas-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  canvas { display: block; }
+
+  .overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .title-block {
+    top: 24px; left: 32px;
+  }
+
+  .title-block h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #f0ece4;
+    line-height: 1.1;
+  }
+
+  .title-block .subtitle {
+    font-size: 10px;
+    font-weight: 300;
+    color: #7a7668;
+    margin-top: 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .info-panel {
+    bottom: 24px; left: 32px;
+    background: rgba(3, 3, 8, 0.8);
+    border: 1px solid rgba(120, 110, 90, 0.2);
+    border-radius: 2px;
+    padding: 14px 18px;
+    backdrop-filter: blur(8px);
+    min-width: 260px;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 11px;
+    font-weight: 300;
+  }
+
+  .info-label { color: #7a7668; letter-spacing: 0.06em; }
+  .info-value { font-weight: 500; letter-spacing: 0.02em; }
+  .info-value.code { color: #c9a84c; }
+  .info-value.anchor { color: #e85d4a; }
+  .info-value.net { color: #5ae8a0; }
+
+  .block-grid {
+    top: 24px; right: 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 200px;
+  }
+
+  .block-card {
+    background: rgba(3, 3, 8, 0.75);
+    border: 1px solid rgba(120, 110, 90, 0.2);
+    border-radius: 2px;
+    padding: 10px 12px;
+    backdrop-filter: blur(6px);
+    transition: border-color 0.4s;
+  }
+
+  .block-card .block-label {
+    font-size: 9px;
+    color: #5a5448;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .block-card .block-anchor {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1;
+    transition: color 0.3s;
+  }
+
+  .block-card .block-cycle {
+    font-size: 9px;
+    color: #7a7668;
+    margin-top: 3px;
+    display: flex;
+    gap: 3px;
+  }
+
+  .block-card .block-cycle .pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(120, 110, 90, 0.2);
+    transition: all 0.3s;
+  }
+
+  .block-card .block-cycle .pip.active {
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .controls {
+    bottom: 24px; right: 32px;
+    pointer-events: all;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .ctrl-btn {
+    width: 32px; height: 32px;
+    border: 1px solid rgba(120, 110, 90, 0.25);
+    border-radius: 2px;
+    background: rgba(3, 3, 8, 0.7);
+    color: #9a8e7a;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+    font-family: inherit;
+  }
+
+  .ctrl-btn:hover {
+    border-color: #c9a84c;
+    color: #c9a84c;
+  }
+
+  .speed-label {
+    font-size: 10px;
+    color: #5a5448;
+    letter-spacing: 0.06em;
+    min-width: 32px;
+    text-align: center;
+  }
+
+  .legend {
+    bottom: 90px; right: 32px;
+    font-size: 10px;
+    color: #5a5448;
+    line-height: 1.8;
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .mode-toggle {
+    top: 90px; left: 32px;
+    pointer-events: all;
+    display: flex;
+    gap: 6px;
+  }
+
+  .mode-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 5px 10px;
+    border: 1px solid rgba(120, 110, 90, 0.2);
+    border-radius: 2px;
+    background: rgba(3, 3, 8, 0.6);
+    color: #5a5448;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+
+  .mode-btn:hover { border-color: #7a7668; color: #9a8e7a; }
+  .mode-btn.active {
+    border-color: #c9a84c;
+    color: #c9a84c;
+    background: rgba(201, 168, 76, 0.08);
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<!-- Title -->
+<div class="overlay title-block">
+  <h1>The Fabric of Spacetime</h1>
+  <div class="subtitle">4 Code Blocks · [[5,1,3]] Tensor Network · K₅ ⊗ K₅ ⊗ K₅ ⊗ K₅</div>
+</div>
+
+<!-- View Mode -->
+<div class="overlay mode-toggle">
+  <button class="mode-btn active" id="mode-network" onclick="setMode('network')">Network</button>
+  <button class="mode-btn" id="mode-exploded" onclick="setMode('exploded')">Exploded</button>
+  <button class="mode-btn" id="mode-flat" onclick="setMode('flat')">Flat</button>
+</div>
+
+<!-- Block status cards -->
+<div class="overlay block-grid" id="block-grid"></div>
+
+<!-- Info Panel -->
+<div class="overlay info-panel">
+  <div class="info-row">
+    <span class="info-label">Structure</span>
+    <span class="info-value code">4 × [[5,1,3]]</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Total physical qubits</span>
+    <span class="info-value">20</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Shared edges</span>
+    <span class="info-value net" id="shared-count">—</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Inter-block bonds</span>
+    <span class="info-value net" id="bond-count">—</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Phase offsets</span>
+    <span class="info-value">0, 2π/5, 4π/5, 6π/5</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Symmetry</span>
+    <span class="info-value">(ℤ₅)⁴ · S₄</span>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="overlay legend">
+  <div><span class="legend-dot" style="background:#e85d4a;"></span>Anchor (Watchman)</div>
+  <div><span class="legend-dot" style="background:#4a9ee8;"></span>Bulk Qubit</div>
+  <div><span class="legend-dot" style="background:#5ae8a0;"></span>Inter-block Bond</div>
+  <div><span class="legend-dot" style="background:#c9a84c33; border:1px solid #c9a84c55;"></span>Intra-block Edge</div>
+</div>
+
+<!-- Controls -->
+<div class="overlay controls">
+  <button class="ctrl-btn" id="btn-slower" title="Slower">−</button>
+  <div class="speed-label" id="speed-label">1.0×</div>
+  <button class="ctrl-btn" id="btn-faster" title="Faster">+</button>
+  <div style="width:8px"></div>
+  <button class="ctrl-btn" id="btn-pause" title="Pause/Play">⏸</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+  // ═══════════════════════════════════════════════════════
+  // CONSTANTS & CONFIG
+  // ═══════════════════════════════════════════════════════
+
+  const BLOCK_COLORS = [
+    { bulk: 0x4a9ee8, anchor: 0xe85d4a, edge: 0x1a4a6a, label: '#4a9ee8' },  // Block A: blue
+    { bulk: 0xa87acf, anchor: 0xe85d4a, edge: 0x4a2a6a, label: '#a87acf' },  // Block B: violet
+    { bulk: 0xcfa84a, anchor: 0xe85d4a, edge: 0x6a5a1a, label: '#cfa84a' },  // Block C: gold
+    { bulk: 0x5ae8a0, anchor: 0xe85d4a, edge: 0x1a6a4a, label: '#5ae8a0' },  // Block D: teal
+  ];
+
+  const INTER_BOND_COLOR = 0x5ae8a0;
+  const BG_COLOR = 0x030308;
+  const NODE_NAMES = ['q₁','q₂','q₃','q₄','q₅'];
+  const BLOCK_NAMES = ['α','β','γ','δ'];
+
+  // Phase offsets: each block is shifted by 2π/5 from the previous
+  // This means when block α has anchor at q₁, block β has it at q₂, etc.
+  const PHASE_OFFSETS = [0, 2*Math.PI/5, 4*Math.PI/5, 6*Math.PI/5];
+
+  // 4-Simplex base vertices in 4D (Z₅ parameterization)
+  const BASE_4D = [];
+  for (let k = 0; k < 5; k++) {
+    const a1 = 2 * Math.PI * k / 5;
+    const a2 = 4 * Math.PI * k / 5;
+    BASE_4D.push([Math.cos(a1), Math.sin(a1), Math.cos(a2), Math.sin(a2)]);
+  }
+
+  // K₅ edges (10 per block)
+  const K5_EDGES = [];
+  for (let i = 0; i < 5; i++)
+    for (let j = i + 1; j < 5; j++)
+      K5_EDGES.push([i, j]);
+
+  // Block center positions (tetrahedral arrangement for "network" mode)
+  const TET_SCALE = 3.2;
+  const BLOCK_CENTERS_NETWORK = [
+    [ 0,           1.1 * TET_SCALE,  0],               // top
+    [-0.94 * TET_SCALE, -0.33 * TET_SCALE, -0.54 * TET_SCALE],  // front-left
+    [ 0.94 * TET_SCALE, -0.33 * TET_SCALE, -0.54 * TET_SCALE],  // front-right
+    [ 0,          -0.33 * TET_SCALE,  1.08 * TET_SCALE],  // back
+  ];
+
+  // Exploded: same but scaled out more
+  const EXPLODE = 1.6;
+  const BLOCK_CENTERS_EXPLODED = BLOCK_CENTERS_NETWORK.map(c => c.map(v => v * EXPLODE));
+
+  // Flat grid
+  const FLAT_SPACING = 4.5;
+  const BLOCK_CENTERS_FLAT = [
+    [-FLAT_SPACING * 0.55, FLAT_SPACING * 0.5, 0],
+    [ FLAT_SPACING * 0.55, FLAT_SPACING * 0.5, 0],
+    [-FLAT_SPACING * 0.55, -FLAT_SPACING * 0.5, 0],
+    [ FLAT_SPACING * 0.55, -FLAT_SPACING * 0.5, 0],
+  ];
+
+  // Inter-block connections (which blocks share edges)
+  // In a tetrahedral arrangement, all pairs are connected
+  const INTER_BONDS = [
+    [0,1], [0,2], [0,3], [1,2], [1,3], [2,3]
+  ];
+
+  // ═══════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════
+  let speed = 1.0;
+  let paused = false;
+  let theta = 0;
+  let currentMode = 'network';
+  let targetCenters = BLOCK_CENTERS_NETWORK.map(c => [...c]);
+  let liveCenters = BLOCK_CENTERS_NETWORK.map(c => [...c]);
+  let blockAnchors = [0, 0, 0, 0];
+
+  // ═══════════════════════════════════════════════════════
+  // THREE.JS SETUP
+  // ═══════════════════════════════════════════════════════
+  const container = document.getElementById('canvas-container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(BG_COLOR);
+  scene.fog = new THREE.FogExp2(BG_COLOR, 0.025);
+
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 2, 14);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0x404040, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xfff5e6, 0.7);
+  dirLight.position.set(8, 10, 6);
+  scene.add(dirLight);
+  const fillLight = new THREE.DirectionalLight(0xe6f0ff, 0.3);
+  fillLight.position.set(-6, -4, -8);
+  scene.add(fillLight);
+
+  // ─── BACKGROUND STARS ────────────────────────────────
+  const starGeo = new THREE.BufferGeometry();
+  const starPos = new Float32Array(1200);
+  for (let i = 0; i < 1200; i++) starPos[i] = (Math.random() - 0.5) * 60;
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x2a2820, size: 0.04, sizeAttenuation: true })));
+
+  // ═══════════════════════════════════════════════════════
+  // CREATE BLOCK OBJECTS
+  // ═══════════════════════════════════════════════════════
+
+  const blocks = [];
+
+  for (let b = 0; b < 4; b++) {
+    const block = {
+      nodes: [],
+      glows: [],
+      edges: [],
+      group: new THREE.Group()
+    };
+
+    // Nodes
+    for (let i = 0; i < 5; i++) {
+      const geo = new THREE.SphereGeometry(0.09, 24, 24);
+      const mat = new THREE.MeshPhongMaterial({
+        color: BLOCK_COLORS[b].bulk,
+        emissive: BLOCK_COLORS[b].bulk,
+        emissiveIntensity: 0.25,
+        shininess: 60,
+        transparent: true,
+        opacity: 1.0,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      block.group.add(mesh);
+      block.nodes.push(mesh);
+
+      // Glow
+      const gGeo = new THREE.SphereGeometry(0.16, 16, 16);
+      const gMat = new THREE.MeshBasicMaterial({
+        color: BLOCK_COLORS[b].bulk,
+        transparent: true,
+        opacity: 0.06,
+        side: THREE.BackSide,
+      });
+      const glow = new THREE.Mesh(gGeo, gMat);
+      block.group.add(glow);
+      block.glows.push(glow);
+    }
+
+    // Intra-block edges (K₅)
+    for (let e = 0; e < K5_EDGES.length; e++) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      const mat = new THREE.LineBasicMaterial({
+        color: BLOCK_COLORS[b].edge,
+        transparent: true,
+        opacity: 0.25,
+      });
+      const line = new THREE.Line(geo, mat);
+      block.group.add(line);
+      block.edges.push(line);
+    }
+
+    scene.add(block.group);
+    blocks.push(block);
+  }
+
+  // ─── INTER-BLOCK BONDS ───────────────────────────────
+  const interBondLines = [];
+  for (let ib = 0; ib < INTER_BONDS.length; ib++) {
+    // Draw 2 lines per bond (from closest node pair) for visual richness
+    for (let strand = 0; strand < 2; strand++) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      const mat = new THREE.LineBasicMaterial({
+        color: INTER_BOND_COLOR,
+        transparent: true,
+        opacity: 0.0,
+      });
+      const line = new THREE.Line(geo, mat);
+      scene.add(line);
+      interBondLines.push({ line, bondIdx: ib, strand });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // 4D PROJECTION
+  // ═══════════════════════════════════════════════════════
+
+  function project4Dto3D(v4, angle) {
+    const c1 = Math.cos(angle), s1 = Math.sin(angle);
+    const c2 = Math.cos(2 * angle), s2 = Math.sin(2 * angle);
+
+    const x1 = v4[0] * c1 - v4[1] * s1;
+    const y1 = v4[0] * s1 + v4[1] * c1;
+    const x2 = v4[2] * c2 - v4[3] * s2;
+    const y2 = v4[2] * s2 + v4[3] * c2;
+
+    const perspDist = 4.5;
+    const w = y2;
+    const scale = perspDist / (perspDist - w * 0.5);
+
+    return { x: x1 * scale, y: x2 * scale, z: y1 * scale, w, scale };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // UI SETUP
+  // ═══════════════════════════════════════════════════════
+
+  // Block cards
+  const blockGrid = document.getElementById('block-grid');
+  for (let b = 0; b < 4; b++) {
+    const card = document.createElement('div');
+    card.className = 'block-card';
+    card.id = `card-${b}`;
+    card.innerHTML = `
+      <div class="block-label">Block ${BLOCK_NAMES[b]}</div>
+      <div class="block-anchor" id="card-anchor-${b}" style="color:${BLOCK_COLORS[b].label}">q₁</div>
+      <div class="block-cycle" id="card-cycle-${b}">
+        ${[0,1,2,3,4].map(i => `<div class="pip" id="pip-${b}-${i}" style="--c:${BLOCK_COLORS[b].label}"></div>`).join('')}
+      </div>
+    `;
+    blockGrid.appendChild(card);
+  }
+
+  // Controls
+  document.getElementById('btn-faster').addEventListener('click', () => {
+    speed = Math.min(speed + 0.25, 3.0);
+    document.getElementById('speed-label').textContent = speed.toFixed(1) + '×';
+  });
+  document.getElementById('btn-slower').addEventListener('click', () => {
+    speed = Math.max(speed - 0.25, 0.25);
+    document.getElementById('speed-label').textContent = speed.toFixed(1) + '×';
+  });
+  document.getElementById('btn-pause').addEventListener('click', () => {
+    paused = !paused;
+    document.getElementById('btn-pause').textContent = paused ? '▶' : '⏸';
+  });
+
+  // Mode
+  window.setMode = function(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('mode-' + mode).classList.add('active');
+    switch (mode) {
+      case 'network': targetCenters = BLOCK_CENTERS_NETWORK.map(c => [...c]); break;
+      case 'exploded': targetCenters = BLOCK_CENTERS_EXPLODED.map(c => [...c]); break;
+      case 'flat': targetCenters = BLOCK_CENTERS_FLAT.map(c => [...c]); break;
+    }
+  };
+
+  // Camera orbit
+  let isDragging = false, prevMouse = { x: 0, y: 0 };
+  let camAngleX = 0, camAngleY = 0.15;
+
+  renderer.domElement.addEventListener('mousedown', (e) => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+  window.addEventListener('mouseup', () => { isDragging = false; });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    camAngleX += (e.clientX - prevMouse.x) * 0.004;
+    camAngleY = Math.max(-1.2, Math.min(1.2, camAngleY + (e.clientY - prevMouse.y) * 0.004));
+    prevMouse = { x: e.clientX, y: e.clientY };
+  });
+
+  renderer.domElement.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) { isDragging = true; prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }
+  }, { passive: true });
+  window.addEventListener('touchend', () => { isDragging = false; });
+  window.addEventListener('touchmove', (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    camAngleX += (e.touches[0].clientX - prevMouse.x) * 0.004;
+    camAngleY = Math.max(-1.2, Math.min(1.2, camAngleY + (e.touches[0].clientY - prevMouse.y) * 0.004));
+    prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+
+  // ═══════════════════════════════════════════════════════
+  // ANIMATION LOOP
+  // ═══════════════════════════════════════════════════════
+
+  const clock = new THREE.Clock();
+  const nodeWorldPositions = Array.from({ length: 4 }, () => Array.from({ length: 5 }, () => new THREE.Vector3()));
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+
+    if (!paused) theta += dt * speed * 0.4;
+
+    // Lerp centers toward target
+    for (let b = 0; b < 4; b++) {
+      for (let d = 0; d < 3; d++) {
+        liveCenters[b][d] += (targetCenters[b][d] - liveCenters[b][d]) * 0.04;
+      }
+    }
+
+    // ─── UPDATE EACH BLOCK ─────────────────────────────
+    for (let b = 0; b < 4; b++) {
+      const blockTheta = theta + PHASE_OFFSETS[b];
+      const cx = liveCenters[b][0], cy = liveCenters[b][1], cz = liveCenters[b][2];
+
+      // Project vertices
+      const proj = [];
+      let minW = Infinity;
+      for (let i = 0; i < 5; i++) {
+        const p = project4Dto3D(BASE_4D[i], blockTheta);
+        proj.push(p);
+        if (p.w < minW) minW = p.w;
+      }
+
+      // Determine anchor (deepest w)
+      let anchor = 0;
+      let deepest = Infinity;
+      for (let i = 0; i < 5; i++) {
+        if (proj[i].w < deepest) { deepest = proj[i].w; anchor = i; }
+      }
+      blockAnchors[b] = anchor;
+
+      // Find w range for scaling
+      let maxW = -Infinity;
+      for (let i = 0; i < 5; i++) if (proj[i].w > maxW) maxW = proj[i].w;
+      const wRange = maxW - minW + 0.001;
+
+      // Update nodes
+      for (let i = 0; i < 5; i++) {
+        const p = proj[i];
+        const wx = cx + p.x;
+        const wy = cy + p.y;
+        const wz = cz + p.z;
+
+        blocks[b].nodes[i].position.set(wx, wy, wz);
+        blocks[b].glows[i].position.set(wx, wy, wz);
+        nodeWorldPositions[b][i].set(wx, wy, wz);
+
+        const isAnc = (i === anchor);
+        const wNorm = (p.w - minW) / wRange;
+        const radius = 0.07 + wNorm * 0.04 + (isAnc ? 0.04 + 0.015 * Math.sin(theta * 5) : 0);
+
+        blocks[b].nodes[i].scale.setScalar(radius / 0.09);
+        blocks[b].glows[i].scale.setScalar((radius + 0.07) / 0.16);
+
+        const tgtColor = isAnc ? BLOCK_COLORS[b].anchor : BLOCK_COLORS[b].bulk;
+        blocks[b].nodes[i].material.color.lerp(new THREE.Color(tgtColor), 0.1);
+        blocks[b].nodes[i].material.emissive.lerp(new THREE.Color(tgtColor), 0.1);
+        blocks[b].nodes[i].material.emissiveIntensity = isAnc ? 0.55 : 0.2;
+        blocks[b].glows[i].material.color.lerp(new THREE.Color(tgtColor), 0.1);
+        blocks[b].glows[i].material.opacity = isAnc ? 0.15 : 0.04;
+      }
+
+      // Update intra-block edges
+      for (let e = 0; e < K5_EDGES.length; e++) {
+        const [i, j] = K5_EDGES[e];
+        const pa = blocks[b].nodes[i].position;
+        const pb = blocks[b].nodes[j].position;
+        const arr = blocks[b].edges[e].geometry.attributes.position.array;
+        arr[0] = pa.x; arr[1] = pa.y; arr[2] = pa.z;
+        arr[3] = pb.x; arr[4] = pb.y; arr[5] = pb.z;
+        blocks[b].edges[e].geometry.attributes.position.needsUpdate = true;
+
+        const isAnc = (i === anchor || j === anchor);
+        blocks[b].edges[e].material.opacity = isAnc ? 0.4 : 0.15;
+      }
+    }
+
+    // ─── INTER-BLOCK BONDS ─────────────────────────────
+    let bondIdx = 0;
+    const showBonds = (currentMode !== 'flat');
+
+    for (let ib = 0; ib < INTER_BONDS.length; ib++) {
+      const [bA, bB] = INTER_BONDS[ib];
+
+      // Find the 2 closest node pairs between blocks
+      const pairs = [];
+      for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 5; j++) {
+          const dist = nodeWorldPositions[bA][i].distanceTo(nodeWorldPositions[bB][j]);
+          pairs.push({ i, j, dist });
+        }
+      }
+      pairs.sort((a, b) => a.dist - b.dist);
+
+      for (let strand = 0; strand < 2; strand++) {
+        const entry = interBondLines[bondIdx];
+        const pair = pairs[strand];
+        const pA = nodeWorldPositions[bA][pair.i];
+        const pB = nodeWorldPositions[bB][pair.j];
+        const arr = entry.line.geometry.attributes.position.array;
+        arr[0] = pA.x; arr[1] = pA.y; arr[2] = pA.z;
+        arr[3] = pB.x; arr[4] = pB.y; arr[5] = pB.z;
+        entry.line.geometry.attributes.position.needsUpdate = true;
+
+        const targetOp = showBonds ? (0.12 + 0.06 * Math.sin(theta * 2 + ib)) : 0;
+        entry.line.material.opacity += (targetOp - entry.line.material.opacity) * 0.06;
+        bondIdx++;
+      }
+    }
+
+    // ─── CAMERA ────────────────────────────────────────
+    const camDist = currentMode === 'flat' ? 12 : (currentMode === 'exploded' ? 18 : 14);
+    const actualDist = camera.position.length();
+    const lerpDist = actualDist + (camDist - actualDist) * 0.03;
+
+    camera.position.x = lerpDist * Math.sin(camAngleX) * Math.cos(camAngleY);
+    camera.position.y = lerpDist * Math.sin(camAngleY);
+    camera.position.z = lerpDist * Math.cos(camAngleX) * Math.cos(camAngleY);
+    camera.lookAt(0, 0.5, 0);
+
+    // ─── UI UPDATES ────────────────────────────────────
+    for (let b = 0; b < 4; b++) {
+      const anc = blockAnchors[b];
+      document.getElementById(`card-anchor-${b}`).textContent = NODE_NAMES[anc];
+
+      // Cycle pips
+      for (let i = 0; i < 5; i++) {
+        const pip = document.getElementById(`pip-${b}-${i}`);
+        if (i === anc) {
+          pip.classList.add('active');
+          pip.style.background = BLOCK_COLORS[b].label;
+        } else {
+          pip.classList.remove('active');
+          pip.style.background = 'rgba(120,110,90,0.2)';
+        }
+      }
+
+      // Card border glow
+      const card = document.getElementById(`card-${b}`);
+      card.style.borderColor = `rgba(${hexToRgb(BLOCK_COLORS[b].label)}, 0.25)`;
+    }
+
+    // Shared count
+    document.getElementById('shared-count').textContent =
+      currentMode === 'flat' ? 'hidden' : `${INTER_BONDS.length} pairs`;
+    document.getElementById('bond-count').textContent =
+      currentMode === 'flat' ? '0' : `${INTER_BONDS.length * 2} strands`;
+
+    renderer.render(scene, camera);
+  }
+
+  function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r},${g},${b}`;
+  }
+
+  // ─── RESIZE ──────────────────────────────────────────
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  animate();
+})();
+</script>
+</body>
+</html>

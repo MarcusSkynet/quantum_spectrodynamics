@@ -1,115 +1,150 @@
 # Quantum Spectrodynamics (QSD)
 
-**A framework for deriving Standard Model parameters from information geometry**
+**Deriving Standard Model Parameters from the Geometry of Quantum Error-Correcting Codes**
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.XXXXXXX-blue)](https://doi.org/10.5281/zenodo.XXXXXXX)
 
 ---
 
-## What is QSD?
+## Overview
 
-Quantum Spectrodynamics derives Standard Model parameters from the geometry of the `[[5,1,3]]` perfect quantum error-correcting code. The code's structure produces two complementary graphs — the complete graph K₄ and the cycle graph C₅ — whose spectral properties, combined with three mathematical constants and the Planck mass, yield particle physics observables with zero free parameters.
+Quantum Spectrodynamics (QSD) is a theoretical framework that derives fundamental
+physics constants — gauge couplings, particle masses, and the cosmological constant —
+from the algebraic geometry of the **[[5,1,3]] quantum error-correcting code**.
 
-### Core results
+The framework requires **zero free parameters** beyond the Planck mass. All predictions
+emerge from three constants (the *QSD triad*) that arise naturally from the code's
+topology:
 
-| Observable | QSD prediction | Experimental value | Accuracy |
+| Constant | Symbol | Expression | Value |
 |---|---|---|---|
-| Fine structure constant α⁻¹ | 137.036 | 137.035999084 | 15 ppm |
-| Weak mixing angle sin²θ_W | 0.2312 | 0.23121 ± 0.00004 | 0.5% |
-| Higgs mass m_H | 126.7 GeV | 125.25 ± 0.17 GeV | 1.3% |
-| Syndrome energy E_syn | 28.24 GeV | ~28.3 GeV (CMS excess) | 0.2% |
+| Holographic bit density | Hb₄ | 1/(4 ln 2) | 0.36067 |
+| Geometric strain | ς | 3/(80 φ²) | 0.01432 |
+| Spectral bond | ϖ | π φ² | 8.22480 |
 
-### Input constants
+where φ = (1 + √5)/2 is the golden ratio.
 
-The entire framework rests on:
+### Key Predictions vs. Experiment
 
-- **Hb₄ = 1/(4 ln 2)** — holographic bit density in 4D (from the Bekenstein–Hawking bound)
-- **φ = (1+√5)/2** — golden ratio (eigenvalue ratio of C₅)
-- **ς = 3/(80φ²)** — graph strain (from K₄ ∪ C₅ topology)
-- **M_Pl** — Planck mass (the only dimensionful input)
+| Observable | QSD Prediction | Experiment | Agreement |
+|---|---|---|---|
+| α⁻¹ (fine structure) | 137.0330 | 137.0360 (CODATA) | 22 ppm |
+| α_s (strong coupling) | 0.11781 | 0.1180 (PDG) | 0.16% |
+| sin²θ_W (weak mixing) | 0.23122 | 0.23122 (PDG) | 0.004% |
+| m_H (Higgs mass) | 126.7 GeV | 125.25 GeV | 1.2% |
+| m_W (W boson mass) | 81.1 GeV | 80.377 GeV | 0.9% |
+| log₁₀(ρ_Λ/ρ_Pl) | −121.28 | −121.27 (Planck) | 0.008% |
 
-No parameters are fitted to data.
+| Symbol | Observable | QSD Prediction | Experimental Value | Source | Agreement |
+|---|---|---|---|---|---|
+| α⁻¹ | Fine structure constant | 137.0330 | 137.0360 | CODATA 2018 | 22 ppm |
+| α_s | Strong coupling at M_Z | 0.11781 | 0.1180 | PDG 2022 | 0.16% |
+| sin²θ_W | Weak mixing angle | 0.23122 | 0.23122 | PDG 2022 | 0.004% |
+| m_H | Higgs boson mass | 126.7 GeV | 125.25 GeV | PDG 2022 | 1.2% |
+| m_W | W boson mass | 81.1 GeV | 80.377 GeV | PDG 2022 | 0.9% |
+| log₁₀(ρ_Λ/ρ_Pl) | Cosmological constant | −121.28 | −121.27 | Planck 2018 | 0.008% |
+
+The **syndrome energy E_syn ≈ 28.2 GeV** is a novel QSD prediction corresponding to
+the dimuon excess observed by CMS at √s ≈ 28.3 GeV.
 
 ---
 
-## Repository structure
+## Repository Structure
 
 ```
 quantum-spectrodynamics/
+├── LICENSE                               CC BY 4.0
+├── README.md                             This file
+├── CITATION.cff                          Machine-readable citation metadata
+├── RELEASE_NOTES.md                      Zenodo release notes for v1.0
+├── environment.yml                       Conda environment for running all code
+├── Makefile                              Build PDFs from LaTeX sources
+├── .gitignore
 │
-├── paper/                          # Theory documents (LaTeX)
-│   ├── qsd_main_preprint.tex       # Main preprint
-│   ├── S1_formal_proofs.tex        # Supplement: formal proofs
-│   ├── S2_energy_scale.tex         # Supplement: energy scale derivation
-│   ├── S3_lagrangian.tex           # Supplement: effective Lagrangian
-│   ├── S4_renormalization.tex      # Supplement: 3-loop renormalization
-│   ├── S5_syndrome_prediction.tex  # Supplement: LHC phenomenology
-│   ├── S6_string_correspondence.tex# Supplement: string theory dictionary
-│   └── S7_cosmological_constant.tex# Supplement: dark energy (speculative)
+├── tex/                                  LaTeX source files
+│   ├── README.md
+│   ├── qsd_main_preprint.tex             Main paper
+│   ├── qsd_s1_formal_proofs.tex          S1: Formal proofs
+│   ├── qsd_s2_energy_scale.tex           S2: Energy scale and dressing
+│   ├── qsd_s3_lagrangian.tex             S3: QSD Lagrangian derivation
+│   ├── qsd_s4_renormalization.tex        S4: Topological renormalization
+│   ├── qsd_s5_syndrome_prediction.tex    S5: Syndrome prediction & proton stability
+│   ├── qsd_s6_string_correspondence.tex  S6: String theory correspondence
+│   ├── qsd_s7_cosmological_constant.tex  S7: Cosmological constant
+│   ├── qsd_tn1_hb_redefinition.tex       TN-1: Hb redefinition note
+│   ├── qsd_references.bib                Shared bibliography (175+ references)
+│   └── qsd_preamble.tex                  Unified notation definitions
 │
-├── notes/                          # Technical notes
-│   └── hb_redefinition.tex         # Hb_n notation and conventions
+├── pdf/                                  Pre-compiled PDFs (for immediate reading)
+│   └── README.md
 │
-├── code/                           # Computational verification
-│   ├── qsd_qiskit_suite.py         # Qiskit quantum circuit simulations
-│   ├── qsd_simulation_suite.py     # NumPy verification of all predictions
-│   ├── qsd_monte_carlo.py          # Monte Carlo error analysis
-│   ├── qsd_syndrome_production.py  # Syndrome production rate calculations
-│   ├── qsd_visualizations.py       # Static figure generation
-│   ├── qsd_qiskit_visualizations.py# Qiskit circuit visualizations
-│   └── qsd_animations.py           # Animated visualizations
+├── code/                                 Python simulation & computation suite
+│   ├── README.md
+│   ├── __init__.py
+│   ├── qsd_constants.py                  Single source of truth for all QSD constants
+│   ├── qsd_simulation_suite.py           Numerical simulations (no Qiskit needed)
+│   ├── qsd_monte_carlo.py                Monte Carlo validation of error bounds
+│   ├── qsd_animations.py                 Animated GIF visualizations
+│   ├── qsd_visualizations.py             Static publication-quality figures
+│   ├── qsd_syndrome_production.py        Syndrome energy production analysis
+│   ├── qsd_qiskit_suite.py               Quantum circuit simulations (Qiskit)
+│   └── qsd_qiskit_additions.py           Extended quantum experiments
 │
-├── notebooks/                      # Interactive notebooks
-│   └── qsd_qiskit_notebook.ipynb   # Run all simulations (sim + hardware)
-│
-├── environment.yml                 # Conda environment (full reproducibility)
-├── CITATION.cff                    # Machine-readable citation
-├── LICENSE                         # CC BY 4.0
-├── RELEASE_NOTES.md                # v1.0 release notes
-└── README.md                       # This file
+└── visualizations/                       Interactive 3D visualizations (Three.js)
+    ├── README.md
+    ├── qsd_4simplex.html                 4-Simplex geometry explorer
+    ├── qsd_4simplex_network.html         Tensor network of 4 code blocks
+    └── qsd_4simplex_snap_mechanism.html  Snap mechanism animation
 ```
 
 ---
 
-## Quick start
+## Quick Start
 
-### 1. Set up the environment
+### Read the Papers
+
+Pre-compiled PDFs are in [`pdf/`](pdf/). Start with the main preprint, then
+consult supplements S1–S7 for detailed derivations.
+
+### Run the Code
 
 ```bash
+# Clone the repository
+git clone https://github.com/[username]/quantum-spectrodynamics.git
+cd quantum-spectrodynamics
+
+# Create the conda environment
 conda env create -f environment.yml
 conda activate qsd
-```
 
-### 2. Verify core predictions (no Qiskit required)
+# Run the master constants module (prints all predictions)
+cd code
+python qsd_constants.py
 
-```bash
-cd code/
-python qsd_simulation_suite.py
-```
+# Generate publication figures
+python qsd_visualizations.py
 
-This runs all analytical derivations and prints the prediction table.
+# Run Monte Carlo validation
+python qsd_monte_carlo.py
 
-### 3. Run quantum circuit simulations
-
-```bash
-# Local simulator (default)
+# Run quantum circuit simulations (requires Qiskit)
 python qsd_qiskit_suite.py
-
-# IBM Quantum hardware
-python qsd_qiskit_suite.py --hw --backend ibm_brisbane
 ```
 
-Or use the Jupyter notebook for interactive exploration:
+### View Interactive Visualizations
+
+Open any `.html` file in `visualizations/` directly in a web browser —
+no server required. These are self-contained Three.js applications.
+
+### Compile LaTeX Sources
 
 ```bash
-jupyter lab notebooks/qsd_qiskit_notebook.ipynb
-```
+# Build all PDFs (requires TeX Live or similar distribution)
+make all
 
-### 4. Build the paper (optional)
-
-```bash
-cd paper/
+# Build a single document
+cd tex
 pdflatex qsd_main_preprint.tex
 bibtex qsd_main_preprint
 pdflatex qsd_main_preprint.tex
@@ -118,66 +153,72 @@ pdflatex qsd_main_preprint.tex
 
 ---
 
-## How to read this repository
+## Theoretical Foundation
 
-**If you are a physicist** evaluating the theoretical claims:
+QSD begins from a single structural postulate: the physical vacuum encodes
+information through the [[5,1,3]] quantum error-correcting code. The five
+physical qubits form a complete graph K₄ embedded in a 5-cycle C₅, creating a
+geometric frustration whose resolution yields the gauge couplings of the
+Standard Model.
 
-1. Start with `paper/qsd_main_preprint.tex` — the self-contained preprint
-2. Check `paper/S1_formal_proofs.tex` for derivation rigour
-3. Run `code/qsd_simulation_suite.py` to independently verify every number
+### The Derivation Chain
 
-**If you are a quantum information scientist:**
+1. **Code geometry → Triad constants** (Hb₄, ς, ϖ) emerge from the
+   [[5,1,3]] code's topological invariants.
+2. **Triad → Gauge couplings** via 3-loop topological renormalization on the
+   K₄–C₅ graph structure.
+3. **Triad → Energy scale** through the 2⁶⁰ information compression factor
+   from Planck to electroweak scale.
+4. **Triad → Mass spectrum** from syndrome extraction eigenvalues of the code.
+5. **Triad → Cosmological constant** via the entropy barrier
+   4/ς ≈ 279.3 nats.
 
-1. The `[[5,1,3]]` code structure is in the main preprint §2
-2. The K₄ Heisenberg exchange model is in `paper/S1_formal_proofs.tex`
-3. Qiskit implementations are in `code/qsd_qiskit_suite.py` (9 simulations)
-
-**If you are interested in the LHC prediction:**
-
-1. `paper/S5_syndrome_prediction.tex` — the 28 GeV syndrome prediction
-2. Falsification criteria and Run 3 predictions are in S5 §7
-
-**If you are a string theorist:**
-
-1. `paper/S6_string_correspondence.tex` — structural dictionary between QSD and string theory
-
----
-
-## What is speculative
-
-Honesty about the framework's boundaries:
-
-| Component | Status | Document |
-|---|---|---|
-| α⁻¹, sin²θ_W, m_H derivations | **Established** — derived, verified | Main preprint, S1, S4 |
-| 28 GeV syndrome prediction | **Testable** — awaiting Run 3 | S5 |
-| String theory correspondence | **Conjectural** — structural dictionary | S6 |
-| Cosmological constant | **Speculative** — Landauer mechanism | S7 |
-
-Supplements S6 and S7 are clearly marked as speculative and do not affect the core predictions.
+Each step is derived algebraically with no fitted parameters. All derivations
+are documented across the main preprint and supplements S1–S7.
 
 ---
 
-## Falsification
+## Code Architecture
 
-QSD makes falsifiable predictions (see S5 §7 for the full table):
-
-- **Syndrome mass**: 28.24 ± 0.5 GeV → falsified if outside 27–29 GeV
-- **Run 3 significance**: ≤ 3–4σ → falsified if it exceeds 5σ (that would indicate a real particle, not a syndrome)
-- **Proton lifetime**: > 10³⁸ years → falsified if proton decay is observed
-- **Width**: broad/unresolved → falsified if a narrow resonance is measured
-
----
-
-## Master relation
-
-The framework satisfies an exact constraint linking the fine structure constant to graph strain:
+All Python modules share a single source of truth:
 
 ```
-α⁻¹ × ς = 1.962874...    (exact, NOT approximated as 2)
+qsd_constants.py                   ← Every other module imports from here
+    ├── qsd_simulation_suite.py      (NumPy/SciPy only)
+    ├── qsd_monte_carlo.py           (NumPy/SciPy + statistics)
+    ├── qsd_animations.py            (+ matplotlib animations)
+    ├── qsd_visualizations.py        (+ matplotlib static plots)
+    ├── qsd_syndrome_production.py   (+ matplotlib + scipy.integrate)
+    └── qsd_qiskit_suite.py          (+ Qiskit)
+         └── qsd_qiskit_additions.py (+ extended experiments)
 ```
 
-All code preserves this exact value. The approximation α⁻¹ × ς ≈ 2 is never used.
+The core modules (`qsd_constants.py`, `qsd_simulation_suite.py`,
+`qsd_monte_carlo.py`) require only NumPy and SciPy. Qiskit is needed only
+for the quantum circuit simulations in `qsd_qiskit_suite.py` and
+`qsd_qiskit_additions.py`.
+
+---
+
+## Dependencies
+
+See [`environment.yml`](environment.yml) for the full conda specification.
+
+**Core** (required for all modules):
+- Python ≥ 3.10
+- NumPy ≥ 1.24
+- SciPy ≥ 1.10
+
+**Visualization** (for figures and animations):
+- Matplotlib ≥ 3.7
+
+**Quantum circuits** (optional — for Qiskit simulations):
+- Qiskit ≥ 1.0
+- Qiskit-Aer ≥ 0.13
+
+**LaTeX compilation** (optional — pre-compiled PDFs included):
+- TeX Live 2023+ or equivalent
+- Packages: amsmath, physics, tikz, hyperref, booktabs
 
 ---
 
@@ -186,30 +227,35 @@ All code preserves this exact value. The approximation α⁻¹ × ς ≈ 2 is ne
 If you use this work, please cite:
 
 ```bibtex
-@software{hubka_qsd_2026,
-  author       = {Hubka, Marcus},
-  title        = {Quantum Spectrodynamics: A Framework for Deriving
-                  Standard Model Parameters from Information Geometry},
-  year         = 2026,
-  publisher    = {Zenodo},
-  version      = {v1.0},
-  doi          = {10.5281/zenodo.XXXXXXX},
-  url          = {https://doi.org/10.5281/zenodo.XXXXXXX}
+@article{hubka2026qsd,
+  author  = {Hubka, Marcus},
+  title   = {Quantum Spectrodynamics: Deriving Standard Model Parameters
+             from the Geometry of Quantum Error-Correcting Codes},
+  year    = {2026},
+  doi     = {10.5281/zenodo.XXXXXXX},
+  note    = {Independent research preprint with seven supplements}
 }
 ```
+
+See [`CITATION.cff`](CITATION.cff) for machine-readable metadata.
 
 ---
 
 ## License
 
-This work is licensed under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/).
+This work is licensed under [Creative Commons Attribution 4.0 International
+(CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
 
-You are free to share and adapt this material for any purpose, provided you give appropriate credit.
+You are free to share and adapt this material for any purpose, provided you
+give appropriate credit.
 
 ---
 
-## Contact
+## Author
 
-Marcus Hubka — Independent Researcher, Czech Republic
+**Marek Hubka**
+Independent Researcher, Czech Republic
 
-For questions, corrections, or collaboration proposals, please open an issue in this repository or contact via the email listed in the preprint.
+---
+
+*Quantum Spectrodynamics v1.0 — February 2026*

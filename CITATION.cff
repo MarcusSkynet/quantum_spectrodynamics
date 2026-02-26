@@ -1,28 +1,39 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+title: >-
+  Quantum Spectrodynamics: Deriving Standard Model Parameters
+  from the Geometry of Quantum Error-Correcting Codes
+message: >-
+  If you use this software or reference this work, please cite
+  it using the metadata from this file.
 type: software
-title: "Quantum Spectrodynamics: A Framework for Deriving Standard Model Parameters from Information Geometry"
-version: "1.0"
-date-released: "2026-02-13"
-license: CC-BY-4.0
-repository-code: "https://github.com/PLACEHOLDER/quantum-spectrodynamics"
-doi: "10.5281/zenodo.XXXXXXX"
 authors:
-  - family-names: Hubka
-    given-names: Marcus
-    affiliation: "Independent Researcher, Czech Republic"
+  - given-names: Marek
+    family-names: Hubka
+    affiliation: Independent Researcher
+    country: CZ
+repository-code: https://github.com/[username]/quantum-spectrodynamics
+url: https://doi.org/10.5281/zenodo.XXXXXXX
 keywords:
   - quantum error correction
-  - Standard Model
+  - standard model
   - fine structure constant
-  - information geometry
+  - gauge couplings
+  - cosmological constant
+  - quantum information
   - holographic principle
-  - Qiskit
+  - theoretical physics
+license: CC-BY-4.0
+version: 1.0.0
+date-released: "2026-02-26"
+doi: 10.5281/zenodo.XXXXXXX
 abstract: >-
-  Quantum Spectrodynamics (QSD) derives Standard Model parameters
-  from the geometry of the [[5,1,3]] perfect quantum error-correcting
-  code. From the holographic bit density, golden ratio, graph strain,
-  and Planck mass, it produces with zero free parameters: the fine
-  structure constant (15 ppm), weak mixing angle (0.5%), Higgs mass
-  (1.3%), and a falsifiable 28 GeV syndrome prediction (0.2% from
-  CMS dimuon excess).
+  Quantum Spectrodynamics (QSD) derives the gauge couplings,
+  particle masses, and cosmological constant of the Standard Model
+  from the algebraic geometry of the [[5,1,3]] quantum error-correcting
+  code, requiring zero free parameters beyond the Planck mass. The
+  framework introduces three fundamental constants — the holographic
+  bit density Hb_4 = 1/(4 ln 2), geometric strain sigma = 3/(80 phi^2),
+  and spectral bond varpi = pi*phi^2 — from which all Standard Model
+  parameters are derived through topological renormalization on the
+  K4-C5 graph structure. Predictions agree with experiment to within
+  0.002%-1.2% across six independent observables.

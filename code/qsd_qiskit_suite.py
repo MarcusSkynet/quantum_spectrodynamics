@@ -1,1201 +1,1374 @@
 #!/usr/bin/env python3
 """
-QSD Qiskit Simulation Suite
-===========================
+QSD Qiskit Simulation Suite -- Core Circuits
+=============================================
 
-Quantum circuit implementations of QSD mechanisms using Qiskit.
+Three quantum circuits demonstrating QSD predictions on real quantum hardware:
 
-Modules:
-1. Golden ratio emergence from C₅ eigenstructure
-2. Holographic bit density Hb₄ verification
-3. K₄ Heisenberg exchange simulation
-4. Mathieu potential ground state
-5. Gauge force emergence from S₄ symmetry
-6. Radion scalar field dynamics
-7. Energy dressing mechanisms
-8. 3-loop renormalization circuits
-9. Syndrome prediction at 28 GeV
+1. Code513Circuit:  [[5,1,3]] syndrome extraction
+   - Proper encoding of logical |0>_L and |1>_L codewords
+   - Ancilla-based syndrome measurement (5 data + 4 ancilla = 9 qubits)
+   - Complete syndrome table: all 15 single-qubit errors -> distinct 4-bit patterns
+   - Verification: quantum Hamming bound saturation (2^4 = 1 + 3*5)
 
-Backend: Supports simulator, Aer, and IBM Quantum hardware via
-         a unified BackendManager.  Call `configure_backend()` to switch.
+2. K4HeisenbergVQE:  Heisenberg antiferromagnet on complete graph K4
+   - H = Hb4 * sum_{i<j} S_i . S_j   (4 qubits, 18 Pauli terms)
+   - VQE ground state: E0 = -3*Hb4/2 with hardware-efficient ansatz
+   - Full spectrum via exact diagonalization
+   - S4 irrep decomposition: 16 states = 2 + 9 + 5
+
+3. C5EigenvalueCircuit:  Golden ratio from pentagon spectrum
+   - C5 adjacency as XX+YY hopping on 5 qubits (single-excitation sector)
+   - VQE eigenvalue extraction with deflation
+   - Verification: |lambda_max / lambda_min| = phi^2
+
+All circuits are designed for:
+- Aer simulator (statevector + shot-based)
+- IBM Quantum hardware (transpiled for real backends)
+
+Requires: qiskit >= 1.0, qiskit-aer >= 0.13, numpy, scipy
+Falls back to numpy-only mode if Qiskit unavailable.
 
 Author: M. Hubka
 Date: February 2026
 """
 
-import numpy as np
+from __future__ import annotations
+
+import sys
+import warnings
+import itertools
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
-import warnings
 
-# ─────────────────────────────────────────────────────────────────────
-# AVAILABILITY FLAGS  (set at import; never crash the whole module)
-# ─────────────────────────────────────────────────────────────────────
+import numpy as np
+from scipy.optimize import minimize
+from scipy.linalg import expm
+
+# ---------------------------------------------------------------------------
+# Import QSD constants
+# ---------------------------------------------------------------------------
+try:
+    from qsd_constants import (
+        GOLDEN_RATIO, GOLDEN_RATIO_SQ, LN2, HB4, SIGMA, VARPI,
+        ALPHA_INV_QSD, ALPHA_S_QSD, MU_RAD,
+        M_HIGGS_QSD, E_SYNDROME_QSD, M_W_QSD,
+    )
+except ImportError:
+    # Inline fallback -- matches qsd_constants.py exactly
+    GOLDEN_RATIO     = (1.0 + np.sqrt(5.0)) / 2.0
+    GOLDEN_RATIO_SQ  = GOLDEN_RATIO ** 2
+    LN2              = np.log(2.0)
+    HB4              = 1.0 / (4.0 * LN2)
+    SIGMA            = 3.0 / (80.0 * GOLDEN_RATIO_SQ)
+    VARPI            = np.pi * GOLDEN_RATIO_SQ
+    MU_RAD           = (1.22089e19 / 2**60) * GOLDEN_RATIO_SQ * (1.0 - 6.0 * SIGMA)
+    E_SYNDROME_QSD   = MU_RAD * (1.0 + 8.0 * SIGMA)
+    M_HIGGS_QSD      = 5.0 * MU_RAD
+
+# ---------------------------------------------------------------------------
+# Qiskit availability check
+# ---------------------------------------------------------------------------
 QISKIT_AVAILABLE = False
-AER_AVAILABLE    = False
-IBM_AVAILABLE    = False
+AER_AVAILABLE = False
 
 try:
-    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-    from qiskit.circuit import Parameter
-    from qiskit.quantum_info import Statevector, Operator, SparsePauliOp
-    from qiskit.primitives import StatevectorEstimator, StatevectorSampler
-    from qiskit import transpile as qiskit_transpile
+    from qiskit import QuantumCircuit, transpile
+    from qiskit.quantum_info import (
+        SparsePauliOp, Statevector, Operator, Pauli
+    )
     QISKIT_AVAILABLE = True
+    try:
+        from qiskit_aer import AerSimulator
+        AER_AVAILABLE = True
+    except ImportError:
+        try:
+            from qiskit.providers.aer import AerSimulator
+            AER_AVAILABLE = True
+        except ImportError:
+            pass
 except ImportError:
-    warnings.warn("qiskit not installed – running in NumPy-only mode.")
+    pass
 
-try:
-    from qiskit_aer import AerSimulator
-    from qiskit_aer.primitives import EstimatorV2 as AerEstimator
-    from qiskit_aer.primitives import SamplerV2  as AerSampler
-    AER_AVAILABLE = True
-except ImportError:
-    pass                                       # Aer is optional
-
-try:
-    from qiskit_ibm_runtime import (QiskitRuntimeService,
-                                     EstimatorV2 as IBMEstimator,
-                                     SamplerV2   as IBMSampler)
-    from qiskit.transpiler.preset_passmanagers import (
-        generate_preset_pass_manager)
-    IBM_AVAILABLE = True
-except ImportError:
-    pass                                       # IBM Runtime is optional
+# ---------------------------------------------------------------------------
+# Pauli matrices (always available via numpy)
+# ---------------------------------------------------------------------------
+I2 = np.eye(2, dtype=complex)
+SX = np.array([[0, 1], [1, 0]], dtype=complex)
+SY = np.array([[0, -1j], [1j, 0]], dtype=complex)
+SZ = np.array([[1, 0], [0, -1]], dtype=complex)
+PAULIS = {'I': I2, 'X': SX, 'Y': SY, 'Z': SZ}
 
 
-# ─────────────────────────────────────────────────────────────────────
-# MOCK QuantumCircuit  (lets analytical code run without Qiskit)
-# ─────────────────────────────────────────────────────────────────────
-if not QISKIT_AVAILABLE:
-    class QuantumCircuit:
-        """Minimal stub so class definitions parse without Qiskit."""
-        def __init__(self, *a, **kw):
-            self.num_qubits = a[0] if a else 0
-            self._ops: list = []
-            self.name = kw.get("name", "")
-        def __getattr__(self, _):          return lambda *a, **k: None
-        def copy(self):                    return QuantumCircuit(self.num_qubits)
-        def compose(self, other):          return self
+def kron_list(ops):
+    """Tensor product of a list of operators."""
+    result = ops[0]
+    for op in ops[1:]:
+        result = np.kron(result, op)
+    return result
 
 
-# =============================================================================
-# QSD CONSTANTS  (exact values – graph strain ς, holographic bit density Hb₄)
-# =============================================================================
-
-PHI = (1 + np.sqrt(5)) / 2              # φ = 1.6180339887498949
-
-def Hb(n: int) -> float:
-    """Holographic bit density in *n* dimensions: Hb_n = 1/(n ln 2)."""
-    return 1.0 / (n * np.log(2))
-
-Hb4 = Hb(4)                             # ≈ 0.36067376022224085
-
-# Graph strain  (symbol ς  "varsigma";  LaTeX: \varsigma)
-GS      = 3 / (80 * PHI**2)             # = 0.014323725376792425
-VARSIGMA = GS                            # formal alias
-
-# Master relation  (exact – NOT approximated as 2)
-ALPHA_INV            = 137.035999084
-ALPHA_GS_PRODUCT     = ALPHA_INV * GS   # = 1.9628744…
-
-# Energy scales
-M_PLANCK_GEV = 1.22089e19               # GeV
-MU_0  = (M_PLANCK_GEV / 2**60) * PHI**2 * (1 - 6*GS)   # code scale ≈ 25.34 GeV
-E_SYN = MU_0 * (1 + 8 * GS)            # syndrome energy ≈ 28.24 GeV
+def pauli_string_to_matrix(pstring):
+    """Convert Pauli string like 'XZZXI' to 2^n x 2^n matrix."""
+    return kron_list([PAULIS[c] for c in pstring])
 
 
-# =============================================================================
-# BACKEND MANAGER
-# =============================================================================
+# ============================================================================
+#  MODULE 1:  [[5,1,3]] QUANTUM ERROR-CORRECTING CODE
+# ============================================================================
 
-class BackendManager:
+class Code513Circuit:
     """
-    Unified backend selection for simulator / Aer / IBM Quantum hardware.
+    Complete implementation of the [[5,1,3]] quantum error-correcting code.
 
-    Usage
-    -----
-    >>> from qsd_qiskit_suite import backend
-    >>> backend.configure(use_hardware=True,
-    ...                   backend_name="ibm_brisbane",
-    ...                   shots=8192)
+    The [[5,1,3]] code is the unique minimal quantum code that corrects
+    arbitrary single-qubit errors on one logical qubit.  It saturates the
+    quantum Hamming bound:  2^(n-k) = 2^4 = 16 = 1 + 3n = 1 + 15.
 
-    All simulation classes use the module-level ``backend`` instance
-    automatically.  Reconfigure at any time – the next ``run_*`` call
-    will pick up the change.
+    In QSD, this code IS the vacuum structure of spacetime.  The four
+    stabilizer generators define the syndrome space K4 (complete graph
+    on 4 vertices), while their Z5 cyclic symmetry defines C5 (the
+    pentagon).  Syndromes -- the error-correction signals -- are the
+    predicted 28 GeV resonance.
+
+    Stabilizer generators (S1, Definition 2.2):
+        g1 = XZZXI
+        g2 = IXZZX
+        g3 = XIXZZ
+        g4 = ZXIXZ
+
+    Logical operators:
+        X_L = XXXXX
+        Z_L = ZZZZZ
+
+    Circuit layout:
+        Qubits 0-4:  data register (5 physical qubits)
+        Qubits 5-8:  ancilla register (4 syndrome qubits)
+        Classical 0-3: syndrome readout
     """
+
+    # Stabilizer generators as Pauli strings
+    STABILIZERS = ['XZZXI', 'IXZZX', 'XIXZZ', 'ZXIXZ']
+
+    # Logical operators
+    X_LOGICAL = 'XXXXX'
+    Z_LOGICAL = 'ZZZZZ'
 
     def __init__(self):
-        self.use_hardware: bool = False
-        self.backend_name: str  = "ibm_brisbane"
-        self.shots: int         = 4096
-        self.optimization_level: int = 3
-        self._service  = None          # lazy
-        self._backend  = None          # lazy
+        self.n_data = 5
+        self.n_ancilla = 4
+        self.n_total = 9
 
-    # ── configuration ────────────────────────────────────────────────
-    def configure(self, *,
-                  use_hardware: bool = False,
-                  backend_name: str  = None,
-                  shots: int         = None,
-                  optimization_level: int = None,
-                  auto_select: bool  = False):
+        # Build stabilizer matrices (32 x 32)
+        self.stabilizer_matrices = [
+            pauli_string_to_matrix(s) for s in self.STABILIZERS
+        ]
+        self.x_logical_matrix = pauli_string_to_matrix(self.X_LOGICAL)
+        self.z_logical_matrix = pauli_string_to_matrix(self.Z_LOGICAL)
+
+        # Compute codespace and syndrome table
+        self._logical_zero, self._logical_one = self._compute_codewords()
+        self._syndrome_table = self._build_syndrome_table()
+
+    # ------------------------------------------------------------------
+    # Codespace construction
+    # ------------------------------------------------------------------
+
+    def _compute_codewords(self):
         """
-        (Re)configure the backend.
+        Compute |0>_L and |1>_L by projecting onto the +1 eigenspace
+        of all four stabilizers and Z_L.
 
-        Parameters
-        ----------
-        use_hardware : bool
-            True → IBM Quantum hardware.  False → local simulator.
-        backend_name : str
-            IBM backend, e.g. ``"ibm_brisbane"``, ``"ibm_osaka"``.
-            Ignored when *use_hardware* is False.
-        shots : int
-            Number of measurement shots (default 4096).
-        optimization_level : int
-            Transpiler optimisation 0-3 (default 3).
-        auto_select : bool
-            If True, pick the least-busy IBM backend automatically.
+        |0>_L: +1 eigenstate of g1, g2, g3, g4 AND Z_L
+        |1>_L: +1 eigenstate of g1, g2, g3, g4 AND -1 of Z_L
+               equivalently: X_L |0>_L
         """
-        self.use_hardware = use_hardware
-        if backend_name is not None:
-            self.backend_name = backend_name
-        if shots is not None:
-            self.shots = shots
-        if optimization_level is not None:
-            self.optimization_level = optimization_level
+        dim = 2 ** self.n_data  # 32
 
-        # invalidate cached objects
-        self._backend = None
+        # Projector onto +1 eigenspace of all stabilizers
+        projector = np.eye(dim, dtype=complex)
+        for g in self.stabilizer_matrices:
+            projector = projector @ (np.eye(dim) + g) / 2.0
 
-        if use_hardware and auto_select and IBM_AVAILABLE:
-            svc = self._get_service()
-            self._backend = svc.least_busy(operational=True, simulator=False)
-            self.backend_name = self._backend.name
-            print(f"  Auto-selected: {self.backend_name}")
+        # Further project onto +1 eigenspace of Z_L for |0>_L
+        proj_zl_plus = (np.eye(dim) + self.z_logical_matrix) / 2.0
+        proj_0L = projector @ proj_zl_plus
 
-        # report
-        mode = "IBM Quantum Hardware" if use_hardware else "Local Simulator"
-        sim_kind = ("Aer" if AER_AVAILABLE
-                    else "Statevector" if QISKIT_AVAILABLE
-                    else "NumPy (no Qiskit)")
-        print(f"Backend: {mode}"
-              + (f"  [{self.backend_name}]" if use_hardware else f"  [{sim_kind}]"))
-        print(f"  Shots: {self.shots}   Opt-level: {self.optimization_level}")
+        # The image of proj_0L should be 1-dimensional
+        eigenvalues, eigenvectors = np.linalg.eigh(proj_0L)
+        # Find the eigenvector with eigenvalue ~1
+        idx = np.argmax(eigenvalues.real)
+        logical_zero = eigenvectors[:, idx]
+        logical_zero = logical_zero / np.linalg.norm(logical_zero)
 
-    # ── lazy helpers ─────────────────────────────────────────────────
-    def _get_service(self):
-        if self._service is None:
-            if not IBM_AVAILABLE:
-                raise RuntimeError(
-                    "qiskit-ibm-runtime is not installed.  "
-                    "Install it with:  pip install qiskit-ibm-runtime")
-            self._service = QiskitRuntimeService()
-        return self._service
+        # |1>_L = X_L |0>_L
+        logical_one = self.x_logical_matrix @ logical_zero
+        logical_one = logical_one / np.linalg.norm(logical_one)
 
-    def _get_backend(self):
-        if self._backend is not None:
-            return self._backend
-        if self.use_hardware:
-            svc = self._get_service()
-            self._backend = svc.backend(self.backend_name)
-        elif AER_AVAILABLE:
-            self._backend = AerSimulator()
-        else:
-            self._backend = None            # pure Statevector path
-        return self._backend
+        # Verify properties
+        for i, g in enumerate(self.stabilizer_matrices):
+            ev0 = np.vdot(logical_zero, g @ logical_zero)
+            ev1 = np.vdot(logical_one, g @ logical_one)
+            assert abs(ev0 - 1.0) < 1e-10, (
+                '|0>_L not +1 eigenstate of g%d: got %.6f' % (i+1, ev0))
+            assert abs(ev1 - 1.0) < 1e-10, (
+                '|1>_L not +1 eigenstate of g%d: got %.6f' % (i+1, ev1))
 
-    # ── transpilation ────────────────────────────────────────────────
-    def transpile(self, circuit):
-        """Transpile *circuit* for the current backend."""
-        bk = self._get_backend()
-        if self.use_hardware and IBM_AVAILABLE and bk is not None:
-            pm = generate_preset_pass_manager(
-                    optimization_level=self.optimization_level,
-                    backend=bk)
-            return pm.run(circuit)
-        if AER_AVAILABLE and bk is not None:
-            return qiskit_transpile(circuit, bk)
-        return circuit                     # no transpilation needed
+        zl_0 = np.vdot(logical_zero, self.z_logical_matrix @ logical_zero)
+        zl_1 = np.vdot(logical_one, self.z_logical_matrix @ logical_one)
+        assert abs(zl_0 - 1.0) < 1e-10, 'Z_L on |0>_L = %.6f' % zl_0
+        assert abs(zl_1 + 1.0) < 1e-10, 'Z_L on |1>_L = %.6f' % zl_1
 
-    # ── execution primitives ─────────────────────────────────────────
-    def run_sampler(self, circuit, shots: int = None):
+        return logical_zero, logical_one
+
+    # ------------------------------------------------------------------
+    # Syndrome table (analytical from symplectic inner product)
+    # ------------------------------------------------------------------
+
+    def _build_syndrome_table(self):
         """
-        Run a circuit with measurements → returns ``PubResult``.
+        Build the complete syndrome lookup table.
 
-        Access counts via  ``result.data.<creg>.get_counts()``.
-        For a single unnamed classical register the attribute is ``meas``
-        or ``c``; adapt to your circuit's register names.
+        For each single-qubit Pauli error E on qubit j, the syndrome is
+        the 4-bit string (s1, s2, s3, s4) where s_i = 0 if [g_i, E] = 0
+        and s_i = 1 if {g_i, E} = 0.
+
+        For Pauli errors, this reduces to the symplectic inner product:
+            s_i(X_j) = g_i^Z[j]       (Z-part of stabilizer at position j)
+            s_i(Z_j) = g_i^X[j]       (X-part of stabilizer at position j)
+            s_i(Y_j) = g_i^X[j] XOR g_i^Z[j]
+
+        Returns dict mapping syndrome integer -> (error_type, qubit_index).
         """
-        shots = shots or self.shots
-        isa = self.transpile(circuit)
+        # Extract X and Z parts of each stabilizer
+        stab_x = []  # stab_x[i][j] = 1 if g_i has X at position j
+        stab_z = []  # stab_z[i][j] = 1 if g_i has Z at position j
+        for s in self.STABILIZERS:
+            stab_x.append([1 if c == 'X' else 0 for c in s])
+            stab_z.append([1 if c == 'Z' else 0 for c in s])
 
-        if self.use_hardware and IBM_AVAILABLE:
-            sampler = IBMSampler(self._get_backend())
-        elif AER_AVAILABLE:
-            sampler = AerSampler()
-        elif QISKIT_AVAILABLE:
-            sampler = StatevectorSampler()
-            isa = circuit                  # statevector needs no ISA
-        else:
-            return None
+        table = {0: ('I', -1)}  # syndrome 0 = no error
 
-        job = sampler.run([isa], shots=shots)
-        return job.result()[0]
+        for j in range(self.n_data):
+            for error_type in ['X', 'Y', 'Z']:
+                syndrome_bits = []
+                for i in range(4):
+                    if error_type == 'X':
+                        bit = stab_z[i][j]
+                    elif error_type == 'Z':
+                        bit = stab_x[i][j]
+                    else:  # Y = iXZ, anticommutes iff X-part or Z-part does (XOR)
+                        bit = (stab_x[i][j] + stab_z[i][j]) % 2
+                    syndrome_bits.append(bit)
 
-    def run_estimator(self, circuit, observables):
+                # Convert to integer: s1*8 + s2*4 + s3*2 + s4*1
+                syndrome_int = (syndrome_bits[0] * 8 +
+                                syndrome_bits[1] * 4 +
+                                syndrome_bits[2] * 2 +
+                                syndrome_bits[3] * 1)
+
+                table[syndrome_int] = (error_type, j)
+
+        # Verify all 16 values are distinct (Hamming bound saturation)
+        assert len(table) == 16, (
+            'Expected 16 distinct syndromes, got %d' % len(table))
+        assert set(table.keys()) == set(range(16)), (
+            'Syndrome table does not cover all 4-bit patterns')
+
+        return table
+
+    # ------------------------------------------------------------------
+    # Qiskit circuits
+    # ------------------------------------------------------------------
+
+    def syndrome_extraction_circuit(self,
+                                    error_type=None,
+                                    error_qubit=None):
         """
-        Estimate ⟨ψ|O|ψ⟩ → returns ``PubResult``.
+        Build the full syndrome extraction circuit.
 
-        *observables* should be a ``SparsePauliOp`` in the **virtual**
-        qubit order of *circuit*.  Layout mapping for hardware is
-        handled internally by the IBM Runtime.
-        """
-        if self.use_hardware and IBM_AVAILABLE:
-            isa = self.transpile(circuit)
-            estimator = IBMEstimator(self._get_backend())
-            # IBM Runtime maps observables to physical layout automatically
-            job = estimator.run([(isa, observables)])
-        elif AER_AVAILABLE:
-            estimator = AerEstimator()
-            job = estimator.run([(circuit, observables)])
-        elif QISKIT_AVAILABLE:
-            estimator = StatevectorEstimator()
-            job = estimator.run([(circuit, observables)])
-        else:
-            return None
-        return job.result()[0]
+        Layout:
+            q[0..4] = data qubits (encode |0>_L)
+            q[5..8] = ancilla qubits (measure g1..g4)
+            c[0..3] = classical bits (syndrome readout)
 
-    def statevector(self, circuit):
-        """Exact statevector (local simulation only)."""
-        if QISKIT_AVAILABLE:
-            return Statevector(circuit)
-        return None
-
-    # ── status ───────────────────────────────────────────────────────
-    def status(self) -> Dict[str, bool]:
-        return {"qiskit": QISKIT_AVAILABLE,
-                "aer":    AER_AVAILABLE,
-                "ibm":    IBM_AVAILABLE,
-                "use_hw": self.use_hardware}
-
-    def __repr__(self):
-        hw = f"HW:{self.backend_name}" if self.use_hardware else "SIM"
-        return f"<BackendManager {hw}  shots={self.shots}>"
-
-
-# Module-level singleton – every class uses this
-backend = BackendManager()
-
-
-def configure_backend(**kwargs):
-    """Convenience wrapper: ``configure_backend(use_hardware=True, …)``."""
-    backend.configure(**kwargs)
-
-
-# =============================================================================
-# HELPER: extract counts from a PubResult (adapts to register names)
-# =============================================================================
-
-def _extract_counts(pub_result) -> Dict[str, int]:
-    """
-    Robustly pull a counts dict from a Qiskit PubResult.
-
-    Different backends / Qiskit versions name the classical register
-    data attribute differently (``meas``, ``c``, ``c0``, …).
-    """
-    if pub_result is None:
-        return {}
-    data = pub_result.data
-    # Try common attribute names
-    for attr in ("meas", "c", "c0", "cr"):
-        if hasattr(data, attr):
-            return getattr(data, attr).get_counts()
-    # Fallback: first attribute that has get_counts
-    for attr in dir(data):
-        obj = getattr(data, attr, None)
-        if callable(getattr(obj, "get_counts", None)):
-            return obj.get_counts()
-    return {}
-
-
-# =============================================================================
-# 1. GOLDEN RATIO EMERGENCE FROM C₅
-# =============================================================================
-
-class GoldenRatioCircuit:
-    """
-    Verify that the C₅ (pentagon) eigenvalue ratio gives φ².
-
-    The graph Laplacian of C₅ has eigenvalues
-        λ_k = 2 − 2 cos(2πk/5),  k = 0,…,4
-
-    so  λ₂/λ₁ = (5+√5)/(5−√5) = φ².
-
-    The quantum circuit encodes the C₅ adjacency as a unitary
-    e^{-i A t} on 5 qubits and measures the resulting state.
-    """
-
-    def __init__(self):
-        self.n_qubits = 5
-
-    def c5_adjacency_unitary(self, t: float = 1.0) -> QuantumCircuit:
-        """Build exp(−i A_C₅ t) via RXX+RYY hopping terms."""
-        qc = QuantumCircuit(5, name="C₅(t={:.2f})".format(t))
-        for i in range(5):
-            j = (i + 1) % 5
-            qc.rxx(t, i, j)
-            qc.ryy(t, i, j)
-        return qc
-
-    def create_visualization_circuit(self) -> QuantumCircuit:
-        """5-qubit circuit suitable for sampling on hardware."""
-        qc = QuantumCircuit(5, 5, name="C₅ sample")
-        qc.h(range(5))
-        qc.barrier()
-        t = np.pi / 4
-        for i in range(5):
-            j = (i + 1) % 5
-            qc.rxx(t, i, j)
-            qc.ryy(t, i, j)
-        qc.barrier()
-        qc.measure(range(5), range(5))
-        return qc
-
-    # ── analytical eigenvalues (always available) ────────────────────
-    def eigenvalues_analytical(self) -> Dict:
-        """Exact C₅ Laplacian eigenvalues and golden-ratio check."""
-        eigs = np.sort([2 - 2*np.cos(2*np.pi*k/5) for k in range(5)])
-        l1 = (5 - np.sqrt(5)) / 2
-        l2 = (5 + np.sqrt(5)) / 2
-        return {
-            "eigenvalues":        eigs,
-            "lambda_1":           l1,
-            "lambda_2":           l2,
-            "ratio":              l2 / l1,
-            "phi_squared":        PHI**2,
-            "match":              np.isclose(l2/l1, PHI**2),
-        }
-
-    # ── quantum execution ────────────────────────────────────────────
-    def run_sampler(self, shots: int = None) -> Dict:
-        """Run the visualisation circuit on the configured backend."""
-        qc = self.create_visualization_circuit()
-        pub = backend.run_sampler(qc, shots=shots)
-        counts = _extract_counts(pub)
-        return {"counts": counts, "backend": repr(backend)}
-
-    def run_estimator(self) -> Dict:
-        """
-        Measure ⟨ψ|A_C₅|ψ⟩ with the Estimator primitive.
-
-        Uses a uniform-superposition state |+⟩⊗5 so the expectation
-        value equals the sum of adjacency eigenvalues weighted by
-        |⟨k|+⟩|² – a probe of the spectral structure.
+        Steps:
+            1. Prepare |0>_L on data qubits via initialize
+            2. (Optional) Apply error on specified qubit
+            3. For each stabilizer g_i, measure via ancilla:
+               a. H(ancilla)
+               b. Controlled-X_j for each X in g_i (CNOT from ancilla)
+               c. Controlled-Z_j for each Z in g_i (CZ)
+               d. H(ancilla)
+            4. Measure ancilla -> classical register
         """
         if not QISKIT_AVAILABLE:
-            return self.eigenvalues_analytical()
+            raise RuntimeError('Qiskit not available')
 
-        # state: |+⟩^5
-        qc = QuantumCircuit(5, name="C₅ est")
-        for i in range(5):
-            qc.h(i)
+        qc = QuantumCircuit(self.n_total, self.n_ancilla,
+                            name='513_syndrome')
 
-        # build adjacency SparsePauliOp  (XX+YY)/2 per edge
-        terms, coeffs = [], []
-        for i in range(5):
-            j = (i + 1) % 5
-            for pp in ("XX", "YY"):
-                s = ["I"]*5;  s[i] = pp[0];  s[j] = pp[1]
-                terms.append("".join(reversed(s)))
-                coeffs.append(0.5)
-        obs = SparsePauliOp(terms, coeffs)
+        # --- Step 1: Encode |0>_L ---
+        qc.initialize(self._logical_zero.tolist(), list(range(5)))
+        qc.barrier(label='encode')
 
-        pub = backend.run_estimator(qc, obs)
-        if pub is not None:
-            ev = float(pub.data.evs) if hasattr(pub.data, "evs") else float(pub.data)
-        else:
-            ev = None
+        # --- Step 2: Inject error ---
+        if error_type is not None and error_qubit is not None:
+            assert error_qubit in range(5), 'Invalid qubit: %d' % error_qubit
+            assert error_type in ('X', 'Y', 'Z'), (
+                'Invalid error: %s' % error_type)
+            gate_fn = {'X': qc.x, 'Y': qc.y, 'Z': qc.z}
+            gate_fn[error_type](error_qubit)
+            qc.barrier(label='%s%d' % (error_type, error_qubit))
 
-        result = self.eigenvalues_analytical()
-        result["estimator_expectation"] = ev
-        result["backend"] = repr(backend)
-        return result
+        # --- Step 3: Syndrome extraction ---
+        for anc_idx, stab_str in enumerate(self.STABILIZERS):
+            anc_qubit = 5 + anc_idx
 
+            # Prepare ancilla in |+>
+            qc.h(anc_qubit)
 
-# =============================================================================
-# 2. HOLOGRAPHIC BIT DENSITY  Hb₄
-# =============================================================================
+            # Apply controlled Paulis from ancilla to data
+            for data_q, pauli_char in enumerate(stab_str):
+                if pauli_char == 'X':
+                    qc.cx(anc_qubit, data_q)
+                elif pauli_char == 'Z':
+                    qc.cz(anc_qubit, data_q)
+                # 'I' -> do nothing
+                # (No Y in [[5,1,3]] stabilizers)
 
-class HolographicBitDensity:
-    """
-    Quantum verification of the holographic bit density Hb₄ = 1/(4 ln 2).
+            # Map ancilla back to computational basis
+            qc.h(anc_qubit)
 
-    A 4-qubit GHZ-like state with Hb₄-controlled rotations is prepared
-    and measured; the Shannon entropy of the output distribution is
-    compared with the theoretical prediction.
-    """
+        qc.barrier(label='measure')
 
-    def __init__(self, n_qubits: int = 4):
-        self.n_qubits = n_qubits
-        self.Hb4      = Hb4
+        # --- Step 4: Measure ancilla ---
+        for i in range(self.n_ancilla):
+            qc.measure(5 + i, i)
 
-    def information_channel_circuit(self) -> QuantumCircuit:
-        """4-qubit circuit: GHZ entanglement + Hb₄ rotation."""
-        qc = QuantumCircuit(self.n_qubits, self.n_qubits,
-                            name="Hb₄ channel")
-        theta = np.pi * self.Hb4
-
-        qc.h(0)
-        for i in range(1, self.n_qubits):
-            qc.cx(0, i)
-        qc.barrier()
-        for i in range(self.n_qubits):
-            qc.ry(theta, i)
-        qc.barrier()
-        qc.measure(range(self.n_qubits), range(self.n_qubits))
         return qc
 
-    # ── analytical baseline ──────────────────────────────────────────
-    def _analytical_entropy(self) -> float:
-        theta = np.pi * self.Hb4
-        p0 = np.cos(theta/2)**2
-        p1 = np.sin(theta/2)**2
-        probs = np.array([p0**4, p1**4, 1 - p0**4 - p1**4])
-        probs = probs[probs > 0]
-        return float(-np.sum(probs * np.log2(probs + 1e-15)))
+    # ------------------------------------------------------------------
+    # Simulation methods
+    # ------------------------------------------------------------------
 
-    # ── quantum execution ────────────────────────────────────────────
-    def run(self, shots: int = None) -> Dict:
+    def run_all_syndromes_statevector(self):
         """
-        Run the information-channel circuit and compute Shannon
-        entropy from the measured distribution.
+        Test all 15 single-qubit errors using statevector simulation.
+
+        For each error E applied to |0>_L, compute the syndrome by
+        measuring the eigenvalue of each stabilizer on E|0>_L.
+
+        This is the gold-standard test: purely numerical, no shot noise.
         """
-        analytical_S = self._analytical_entropy()
-        expected_S   = self.n_qubits * self.Hb4
+        results = []
+        all_match = True
 
-        qc  = self.information_channel_circuit()
-        pub = backend.run_sampler(qc, shots=shots)
-        counts = _extract_counts(pub)
+        for error_type in ['X', 'Y', 'Z']:
+            for qubit in range(5):
+                # Build error operator
+                ops = [I2] * 5
+                ops[qubit] = PAULIS[error_type]
+                error_op = kron_list(ops)
 
-        if counts:
-            total = sum(counts.values())
-            probs = np.array(list(counts.values())) / total
-            measured_S = float(-np.sum(probs * np.log2(probs + 1e-15)))
-        else:
-            measured_S = analytical_S
+                # Apply error to |0>_L
+                corrupted = error_op @ self._logical_zero
+
+                # Measure each stabilizer eigenvalue
+                syndrome_bits = []
+                for g_matrix in self.stabilizer_matrices:
+                    eigenvalue = np.vdot(corrupted, g_matrix @ corrupted).real
+                    bit = 0 if eigenvalue > 0 else 1
+                    syndrome_bits.append(bit)
+
+                measured = (syndrome_bits[0] * 8 + syndrome_bits[1] * 4 +
+                            syndrome_bits[2] * 2 + syndrome_bits[3] * 1)
+
+                predicted_error = self._syndrome_table[measured]
+                match = (predicted_error == (error_type, qubit))
+
+                results.append({
+                    'error': '%s%d' % (error_type, qubit),
+                    'syndrome_binary': ''.join(str(b) for b in syndrome_bits),
+                    'syndrome_int': measured,
+                    'predicted_error': (
+                        '%s%d' % (predicted_error[0], predicted_error[1])
+                        if predicted_error[1] >= 0 else 'none'),
+                    'match': match,
+                })
+
+                if not match:
+                    all_match = False
 
         return {
-            "Hb4":              self.Hb4,
-            "n_qubits":         self.n_qubits,
-            "measured_entropy":  measured_S,
-            "analytical_entropy": analytical_S,
-            "expected_entropy":  expected_S,
-            "counts":           counts,
-            "backend":          repr(backend),
+            'syndrome_table': {
+                k: '%s%d' % (v[0], v[1]) if v[1] >= 0 else 'none'
+                for k, v in sorted(self._syndrome_table.items())
+            },
+            'results': results,
+            'all_match': all_match,
+            'n_distinct_syndromes': len(self._syndrome_table),
+            'hamming_bound': '2^4 = 16 = 1 + 3*5 (SATURATED)',
         }
 
+    def run_all_syndromes_circuit(self, n_shots=4096):
+        """
+        Test all 15 single-qubit errors using shot-based Aer simulation.
+        """
+        if not QISKIT_AVAILABLE or not AER_AVAILABLE:
+            raise RuntimeError('Qiskit + Aer required for circuit simulation')
 
-# =============================================================================
-# 3. K₄ HEISENBERG EXCHANGE
-# =============================================================================
+        backend = AerSimulator()
+        results = []
+        all_match = True
 
-class K4HeisenbergCircuit:
+        for error_type in ['X', 'Y', 'Z']:
+            for qubit in range(5):
+                qc = self.syndrome_extraction_circuit(
+                    error_type=error_type, error_qubit=qubit)
+
+                qc_t = transpile(qc, backend)
+                job = backend.run(qc_t, shots=n_shots)
+                counts = job.result().get_counts()
+
+                # Find dominant syndrome (Qiskit bit ordering: MSB first)
+                dominant = max(counts, key=counts.get)
+                syndrome_int = int(dominant, 2)
+
+                predicted = self._syndrome_table.get(syndrome_int, ('?', -1))
+                match = (predicted == (error_type, qubit))
+
+                fidelity = counts.get(dominant, 0) / n_shots
+
+                results.append({
+                    'error': '%s%d' % (error_type, qubit),
+                    'dominant_syndrome': dominant,
+                    'syndrome_int': syndrome_int,
+                    'predicted_error': (
+                        '%s%d' % (predicted[0], predicted[1])
+                        if predicted[1] >= 0 else 'none'),
+                    'match': match,
+                    'fidelity': fidelity,
+                    'n_outcomes': len(counts),
+                })
+
+                if not match:
+                    all_match = False
+
+        return {
+            'results': results,
+            'all_match': all_match,
+            'n_shots': n_shots,
+        }
+
+    def get_codewords(self):
+        """Return the logical codewords as state vectors."""
+        return {
+            'logical_zero': self._logical_zero.copy(),
+            'logical_one': self._logical_one.copy(),
+        }
+
+    def get_syndrome_table(self):
+        """Return the complete syndrome lookup table."""
+        return dict(self._syndrome_table)
+
+    def print_syndrome_table(self):
+        """Print the syndrome table in a formatted way."""
+        print('\n[[5,1,3]] Syndrome Table')
+        print('=' * 55)
+        print('%10s %8s %8s   %s' % ('Syndrome', 'Binary', 'Error', 'Note'))
+        print('-' * 55)
+        for syn in range(16):
+            error_type, qubit = self._syndrome_table[syn]
+            binary = format(syn, '04b')
+            if qubit < 0:
+                error_str = 'none'
+                note = 'no error (codespace)'
+            else:
+                error_str = '%s%d' % (error_type, qubit)
+                note = '%s on physical qubit %d' % (error_type, qubit)
+            print('%10d %8s %8s   %s' % (syn, binary, error_str, note))
+        print('-' * 55)
+        print('Total: %d distinct syndromes '
+              '(Hamming bound: 2^4 = 16 = 1 + 3*5)' % len(self._syndrome_table))
+
+
+# ============================================================================
+#  MODULE 2:  HEISENBERG ANTIFERROMAGNET ON K4
+# ============================================================================
+
+class K4HeisenbergVQE:
     """
-    Quantum simulation of the Heisenberg antiferromagnet on K₄.
+    Variational Quantum Eigensolver for the Heisenberg model on K4.
 
-    H = J Σ_{i<j} Sᵢ·Sⱼ   with  J = Hb₄
+    H = J * sum_{i<j in K4} S_i . S_j
+      = (J/4) * sum_{i<j} (X_i X_j + Y_i Y_j + Z_i Z_j)
 
-    4 spins, 6 edges (complete graph).
-    Ground state: S_tot = 0, E₀ = −3J/2, degeneracy 2.
+    with J = Hb4 = 1/(4 ln 2).  K4 has 6 edges -> 18 Pauli terms.
+
+    Exact spectrum (S1, Theorem 4.1):
+        E = -3J/2  (degeneracy 2,  total spin S=0)
+        E = -J/2   (degeneracy 9,  S=1 triplet + mixed)
+        E = +J/2   (degeneracy 5,  S=2 quintet)
+
+    Total: 2 + 9 + 5 = 16 = 2^4 states.
+
+    S4 representation decomposition (S1, Section 5):
+        Edge rep (dim 6) = 1 + 2 + 3
+        -> U(1)_Y (dim 1) + SU(2)_L (dim 2) + SU(3)_c (dim 3)
     """
 
-    def __init__(self, J: float = None):
-        self.J = J if J is not None else Hb4
+    # All 6 edges of K4
+    EDGES = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+
+    def __init__(self, J=None):
+        self.J = J if J is not None else HB4
         self.n_qubits = 4
-        self._edges = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]
 
-    # ── circuits ─────────────────────────────────────────────────────
-    def heisenberg_trotter_step(self, dt: float) -> QuantumCircuit:
-        """Single first-order Trotter step for exp(−iHdt)."""
-        qc = QuantumCircuit(4, name=f"Trotter(dt={dt:.3f})")
-        for i, j in self._edges:
-            a = self.J * dt / 2
-            qc.rxx(a, i, j)
-            qc.ryy(a, i, j)
-            qc.rzz(a, i, j)
-        return qc
+        self._hamiltonian_matrix = self._build_hamiltonian_matrix()
+        self._eigenvalues, self._eigenvectors = np.linalg.eigh(
+            self._hamiltonian_matrix)
 
-    def prepare_singlet_ground_state(self) -> QuantumCircuit:
-        """
-        Prepare the S = 0 ground state (product of two singlet pairs).
+    def _build_hamiltonian_matrix(self):
+        """Build the 16x16 Hamiltonian matrix."""
+        dim = 2 ** self.n_qubits
+        H = np.zeros((dim, dim), dtype=complex)
 
-        |ψ₀⟩ = |singlet⟩₀₁ ⊗ |singlet⟩₂₃
-        where |singlet⟩ = (|01⟩ − |10⟩)/√2.
-        """
-        qc = QuantumCircuit(4, name="S=0 ground")
-        # pair (0,1)
-        qc.x(1);  qc.h(0);  qc.cx(0, 1);  qc.z(0)
-        # pair (2,3)
-        qc.x(3);  qc.h(2);  qc.cx(2, 3);  qc.z(2)
-        return qc
+        for (i, j) in self.EDGES:
+            for pauli in [SX, SY, SZ]:
+                ops = [I2] * self.n_qubits
+                ops[i] = pauli
+                ops[j] = pauli
+                H += (self.J / 4.0) * kron_list(ops)
 
-    # ── Hamiltonian as SparsePauliOp ─────────────────────────────────
-    def _hamiltonian_op(self):
-        """Return H as a Qiskit SparsePauliOp (virtual qubit order)."""
-        terms, coeffs = [], []
-        for i, j in self._edges:
-            for p in ("XX", "YY", "ZZ"):
-                s = ["I"]*4;  s[i] = p[0];  s[j] = p[1]
-                terms.append("".join(reversed(s)))
-                coeffs.append(self.J / 4)
-        return SparsePauliOp(terms, coeffs)
+        return H
 
-    # ── numpy exact diagonalisation (always available) ───────────────
-    def _exact_diag(self) -> Tuple[float, np.ndarray]:
-        I = np.eye(2, dtype=complex)
-        X = np.array([[0,1],[1,0]], dtype=complex)
-        Y = np.array([[0,-1j],[1j,0]], dtype=complex)
-        Z = np.array([[1,0],[0,-1]], dtype=complex)
-        def kron_n(ops):
-            r = ops[0]
-            for o in ops[1:]: r = np.kron(r, o)
-            return r
-        H = np.zeros((16,16), dtype=complex)
-        for i,j in self._edges:
-            for P in (X,Y,Z):
-                ops = [I,I,I,I]; ops[i]=P; ops[j]=P
-                H += (self.J/4) * kron_n(ops)
-        evals = np.linalg.eigvalsh(H)
-        return float(np.min(evals).real), evals
+    def hamiltonian_as_sparse_pauli_op(self):
+        """Build as Qiskit SparsePauliOp: 18 terms (XX+YY+ZZ on 6 edges)."""
+        if not QISKIT_AVAILABLE:
+            raise RuntimeError('Qiskit not available')
 
-    # ── quantum execution ────────────────────────────────────────────
-    def measure_ground_state_energy(self) -> Dict:
-        """
-        Measure ground-state energy via Estimator (hardware-aware)
-        with exact-diag cross-check.
-        """
-        E_exact, spectrum = self._exact_diag()
-        E_expected = -3 * self.J / 2
+        labels = []
+        coeffs = []
 
-        # quantum measurement
-        E_circuit = E_exact                # default to exact
-        if QISKIT_AVAILABLE:
-            qc  = self.prepare_singlet_ground_state()
-            obs = self._hamiltonian_op()
-            pub = backend.run_estimator(qc, obs)
-            if pub is not None:
-                ev = pub.data.evs if hasattr(pub.data, "evs") else pub.data
-                E_circuit = float(np.real(ev))
+        for (i, j) in self.EDGES:
+            for pp in ['XX', 'YY', 'ZZ']:
+                # SparsePauliOp: qubit 0 is RIGHTMOST character
+                pauli_str = ['I'] * self.n_qubits
+                pauli_str[i] = pp[0]
+                pauli_str[j] = pp[1]
+                labels.append(''.join(reversed(pauli_str)))
+                coeffs.append(self.J / 4.0)
+
+        return SparsePauliOp(labels, coeffs)
+
+    # ------------------------------------------------------------------
+    # Exact diagonalization
+    # ------------------------------------------------------------------
+
+    def exact_spectrum(self):
+        """Full spectrum with degeneracy analysis and S4 decomposition."""
+        evals = self._eigenvalues.real
+
+        # Group into distinct energy levels
+        levels = []
+        tol = 1e-10
+        for e in sorted(evals):
+            if not levels or abs(e - levels[-1][0]) > tol:
+                levels.append([e, 1])
+            else:
+                levels[-1][1] += 1
+
+        E_ground = -3.0 * self.J / 2.0
+        E_middle = -self.J / 2.0
+        E_upper  = self.J / 2.0
 
         return {
-            "measured_energy":  E_circuit,
-            "exact_energy":     E_exact,
-            "expected_energy":  E_expected,
-            "J":                self.J,
-            "error_percent":    abs(E_exact - E_expected)/abs(E_expected)*100,
-            "backend":          repr(backend),
+            'J': self.J,
+            'eigenvalues': evals.tolist(),
+            'energy_levels': [(e, d) for e, d in levels],
+            'ground_state_energy': evals[0],
+            'expected_ground': E_ground,
+            'ground_error': abs(evals[0] - E_ground),
+            'degeneracies': [d for _, d in levels],
+            'expected_degeneracies': [2, 9, 5],
+            'total_states': sum(d for _, d in levels),
         }
 
-    def run_sampler(self, n_trotter_steps: int = 10,
-                    dt: float = 0.1, shots: int = None) -> Dict:
-        """
-        Run Trotterised time-evolution circuit and sample.
+    # ------------------------------------------------------------------
+    # VQE
+    # ------------------------------------------------------------------
 
-        Prepares singlet ground state, applies *n_trotter_steps* Trotter
-        layers, then measures all 4 qubits.
-        """
+    def _numpy_ansatz(self, params, n_layers=2):
+        """Hardware-efficient ansatz using numpy (always available)."""
+        dim = 2 ** self.n_qubits
+        state = np.zeros(dim, dtype=complex)
+        state[0] = 1.0  # |0000>
+
+        p_idx = 0
+        for layer in range(n_layers):
+            for q in range(self.n_qubits):
+                theta_y = params[p_idx]
+                theta_z = params[p_idx + 1]
+                p_idx += 2
+
+                ry = np.array([
+                    [np.cos(theta_y/2), -np.sin(theta_y/2)],
+                    [np.sin(theta_y/2),  np.cos(theta_y/2)]
+                ], dtype=complex)
+                rz = np.array([
+                    [np.exp(-1j*theta_z/2), 0],
+                    [0, np.exp(1j*theta_z/2)]
+                ], dtype=complex)
+
+                gate = rz @ ry
+                ops = [I2] * self.n_qubits
+                ops[q] = gate
+                state = kron_list(ops) @ state
+
+            # CNOT chain + ring closure
+            for ctrl in range(self.n_qubits - 1):
+                state = self._apply_cnot(state, ctrl, ctrl + 1)
+            state = self._apply_cnot(state, self.n_qubits - 1, 0)
+
+        return state
+
+    def _apply_cnot(self, state, control, target):
+        """Apply CNOT to a statevector."""
+        dim = len(state)
+        n = self.n_qubits
+        new_state = state.copy()
+        for idx in range(dim):
+            bits = format(idx, '0%db' % n)
+            if bits[control] == '1':
+                t_bit = '0' if bits[target] == '1' else '1'
+                new_bits = list(bits)
+                new_bits[target] = t_bit
+                new_idx = int(''.join(new_bits), 2)
+                new_state[new_idx] = state[idx]
+                new_state[idx] = 0  # will be overwritten in pair
+        # Cleaner approach: swap amplitudes pairwise
+        new_state = state.copy()
+        for idx in range(dim):
+            bits = list(format(idx, '0%db' % n))
+            if bits[control] == '1':
+                partner_bits = bits.copy()
+                partner_bits[target] = '0' if bits[target] == '1' else '1'
+                partner_idx = int(''.join(partner_bits), 2)
+                if idx < partner_idx:
+                    new_state[idx] = state[partner_idx]
+                    new_state[partner_idx] = state[idx]
+        return new_state
+
+    def hardware_efficient_ansatz(self, params, n_layers=2):
+        """Build Qiskit circuit for hardware-efficient ansatz."""
         if not QISKIT_AVAILABLE:
-            return {"error": "Qiskit not available"}
+            raise RuntimeError('Qiskit not available')
 
-        qc = self.prepare_singlet_ground_state()
-        step = self.heisenberg_trotter_step(dt)
-        for _ in range(n_trotter_steps):
-            qc = qc.compose(step)
-        qc.measure_all()
+        qc = QuantumCircuit(self.n_qubits, name='HEA')
+        p_idx = 0
 
-        pub = backend.run_sampler(qc, shots=shots)
-        counts = _extract_counts(pub)
-        return {"counts": counts, "n_steps": n_trotter_steps,
-                "dt": dt, "backend": repr(backend)}
+        for layer in range(n_layers):
+            for q in range(self.n_qubits):
+                qc.ry(params[p_idx], q)
+                p_idx += 1
+                qc.rz(params[p_idx], q)
+                p_idx += 1
+            for q in range(self.n_qubits - 1):
+                qc.cx(q, q + 1)
+            qc.cx(self.n_qubits - 1, 0)
 
-    def time_evolution_numpy(self, t_total: float = 5.0,
-                             n_steps: int = 50) -> List[Dict]:
-        """Exact time-evolution with NumPy (always available)."""
+        return qc
+
+    def vqe_energy(self, params, n_layers=2):
+        """Evaluate <psi|H|psi> using numpy ansatz."""
+        state = self._numpy_ansatz(params, n_layers)
+        return np.vdot(state, self._hamiltonian_matrix @ state).real
+
+    def run_vqe(self, n_layers=2, n_restarts=5, maxiter=500):
+        """Run VQE with multiple random restarts."""
+        n_params = self.n_qubits * 2 * n_layers
+
+        best_energy = np.inf
+        best_params = None
+        all_results = []
+
+        for restart in range(n_restarts):
+            np.random.seed(42 + restart)
+            x0 = np.random.uniform(0, 2 * np.pi, n_params)
+
+            result = minimize(
+                lambda p: self.vqe_energy(p, n_layers),
+                x0, method='COBYLA',
+                options={'maxiter': maxiter, 'rhobeg': 0.5}
+            )
+
+            all_results.append({
+                'restart': restart,
+                'energy': result.fun,
+                'converged': result.success,
+                'nfev': result.nfev,
+            })
+
+            if result.fun < best_energy:
+                best_energy = result.fun
+                best_params = result.x.copy()
+
+        exact = self.exact_spectrum()
+
+        return {
+            'vqe_ground_energy': best_energy,
+            'exact_ground_energy': exact['ground_state_energy'],
+            'expected_ground': exact['expected_ground'],
+            'vqe_error_abs': abs(best_energy - exact['expected_ground']),
+            'vqe_error_percent': (abs(best_energy - exact['expected_ground'])
+                                  / abs(exact['expected_ground']) * 100),
+            'n_layers': n_layers,
+            'n_params': n_params,
+            'n_restarts': n_restarts,
+            'best_params': best_params.tolist() if best_params is not None
+                           else None,
+            'all_restarts': all_results,
+            'J_coupling': self.J,
+        }
+
+    # ------------------------------------------------------------------
+    # Time evolution (exact, for validation)
+    # ------------------------------------------------------------------
+
+    def time_evolution_exact(self, t_total=10.0, n_steps=200):
+        """Exact time evolution from |0000> tracking energy and correlations."""
         dt = t_total / n_steps
-        I = np.eye(2, dtype=complex)
-        X = np.array([[0,1],[1,0]], dtype=complex)
-        Y = np.array([[0,-1j],[1j,0]], dtype=complex)
-        Z = np.array([[1,0],[0,-1]], dtype=complex)
-        def kron_n(ops):
-            r = ops[0]
-            for o in ops[1:]: r = np.kron(r, o)
-            return r
-        H = np.zeros((16,16), dtype=complex)
-        for i,j in self._edges:
-            for P in (X,Y,Z):
-                ops=[I,I,I,I]; ops[i]=P; ops[j]=P
-                H += (self.J/4)*kron_n(ops)
-        Sz = np.zeros((16,16), dtype=complex)
-        for i in range(4):
-            ops=[I,I,I,I]; ops[i]=Z/2; Sz+=kron_n(ops)
-        psi = np.zeros(16, dtype=complex); psi[8] = 1  # |1000⟩
-        from scipy.linalg import expm
-        U = expm(-1j * H * dt)
-        out = []
-        for step in range(n_steps+1):
-            out.append({"t": step*dt,
-                        "Sz": float(np.real(psi.conj() @ Sz @ psi))})
+        U_dt = expm(-1j * self._hamiltonian_matrix * dt)
+
+        state = np.zeros(16, dtype=complex)
+        state[0] = 1.0
+
+        # S0.S1 operator
+        s01 = np.zeros((16, 16), dtype=complex)
+        for pauli in [SX, SY, SZ]:
+            ops = [I2] * 4
+            ops[0] = pauli
+            ops[1] = pauli
+            s01 += kron_list(ops) / 4.0
+
+        times, energies, correlations = [], [], []
+
+        for step in range(n_steps + 1):
+            t = step * dt
+            E = np.vdot(state, self._hamiltonian_matrix @ state).real
+            corr = np.vdot(state, s01 @ state).real
+
+            times.append(t)
+            energies.append(E)
+            correlations.append(corr)
+
             if step < n_steps:
-                psi = U @ psi
-        return out
+                state = U_dt @ state
 
+        return {
+            'times': times,
+            'energies': energies,
+            'correlations_01': correlations,
+            'energy_conservation': max(energies) - min(energies),
+            'J': self.J,
+        }
 
-# =============================================================================
-# 4. MATHIEU POTENTIAL
-# =============================================================================
+    # ------------------------------------------------------------------
+    # Trotterized time evolution circuit
+    # ------------------------------------------------------------------
 
-class MathieuPotentialCircuit:
-    """
-    Quantum simulation of the Mathieu potential from C₅ continuum limit.
-
-    V(θ) = λ₁(1 − cos 5θ)   with  λ₁ = (5−√5)/2.
-    """
-
-    def __init__(self, n_qubits: int = 5):
-        self.n_qubits = n_qubits
-        self.lambda1  = (5 - np.sqrt(5)) / 2
-
-    def mathieu_hamiltonian_circuit(self, g: float = 1.0) -> QuantumCircuit:
-        """Encode the Mathieu Hamiltonian on *n_qubits* via QFT."""
+    def trotter_step_circuit(self, dt):
+        """Single first-order Trotter step exp(-i H dt) as Qiskit circuit."""
         if not QISKIT_AVAILABLE:
-            return QuantumCircuit(self.n_qubits, name="Mathieu")
-        from qiskit.circuit.library import QFT
-        N  = 2**self.n_qubits
-        qc = QuantumCircuit(self.n_qubits, name="Mathieu")
-        for i in range(self.n_qubits):
-            qc.h(i)
-        qc.append(QFT(self.n_qubits, inverse=True), range(self.n_qubits))
-        qc.rz(g * self.lambda1 * 0.5, 0)          # simplified potential
-        qc.append(QFT(self.n_qubits), range(self.n_qubits))
+            raise RuntimeError('Qiskit not available')
+
+        qc = QuantumCircuit(self.n_qubits,
+                            name='Trotter(dt=%.4f)' % dt)
+
+        angle = self.J * dt / 2.0
+
+        for (i, j) in self.EDGES:
+            qc.rxx(angle, i, j)
+            qc.ryy(angle, i, j)
+            qc.rzz(angle, i, j)
+
         return qc
 
-    def ground_state_energy(self) -> float:
-        """Perturbative ground-state energy of Mathieu equation."""
-        q  = self.lambda1 / 4
-        return -q**2/2 + 7*q**4/128
+    # ------------------------------------------------------------------
+    # S4 symmetry analysis
+    # ------------------------------------------------------------------
 
-
-# =============================================================================
-# 5. GAUGE FORCE EMERGENCE (S₄ symmetry)
-# =============================================================================
-
-class GaugeForceEmergence:
-    """
-    Demonstrate emergence of the SM gauge group from S₄ symmetry of K₄.
-
-    Edge representation: 6 = 1 ⊕ 2 ⊕ 3  →  U(1)_Y ⊕ SU(2)_L ⊕ SU(3)_c
-    """
-
-    def __init__(self):
-        self.n_qubits = 4
-
-    def create_symmetry_circuit(self) -> QuantumCircuit:
-        """Circuit implementing S₄ permutation on 4 qubits."""
-        qc = QuantumCircuit(4, 4, name="S₄ symmetry")
-        qc.h(range(4))
-        qc.swap(0, 1)            # transposition (12)
-        qc.swap(1, 2)            # (23)
-        qc.swap(2, 3)            # (34)
-        qc.barrier()
-        qc.measure(range(4), range(4))
-        return qc
-
-    def decompose_edge_representation(self) -> Dict:
+    def s4_decomposition(self):
         """
-        Character inner-product decomposition of the 6-dim edge rep.
+        Decompose the K4 edge representation under S4 symmetry.
 
-        Returns multiplicities: 1×trivial + 1×2D + 1×3D.
+        The 6 edges of K4 carry a 6-dimensional representation of S4.
+        Character analysis:
+
+        Class:        {e}  {(12)}  {(12)(34)}  {(123)}  {(1234)}
+        Size:           1      6           3        8         6
+        chi_edge:       6      2           2        0         0
+
+        Decomposition:  6 = 1 + 2 + 3
+            dim 1 -> U(1)_Y
+            dim 2 -> SU(2)_L
+            dim 3 -> SU(3)_c
         """
-        # Character table of S₄ (conjugacy classes: e, (ij), (ij)(kl), (ijk), (ijkl))
-        # Edge rep χ: identity fixes all 6 edges; transposition (ij) fixes 2
-        # (the swapped edge itself + the opposite edge not touching i or j);
-        # double transposition fixes 2; 3-cycle and 4-cycle fix 0.
-        chi_edge  = [6, 2, 2, 0, 0]
-        chi_triv  = [1, 1, 1, 1, 1]
-        chi_2D    = [2, 0, 2,-1, 0]
-        chi_3D    = [3, 1,-1, 0,-1]
-        sizes     = [1, 6, 3, 8, 6]        # conjugacy class sizes, |S₄|=24
-        ip = lambda a, b: sum(n*x*y for n,x,y in zip(sizes,a,b)) / 24
+        class_sizes = np.array([1, 6, 3, 8, 6])
+        order_s4 = 24
+
+        # S4 irrep character table
+        chi_table = np.array([
+            [1,  1,  1,  1,  1],   # trivial (dim 1)
+            [1, -1,  1,  1, -1],   # sign (dim 1)
+            [2,  0,  2, -1,  0],   # standard (dim 2)
+            [2,  0, -2, -1,  0],   # sign x standard (dim 2)
+            [3,  1, -1,  0, -1],   # perm rep - trivial (dim 3)
+        ])
+
+        # Edge representation character
+        # Computed by counting edges fixed by representative of each class:
+        # {e}: all 6 fixed -> 6
+        # (12): {1,2} and {3,4} fixed, rest swap -> 2
+        # (12)(34): {1,2} and {3,4} fixed -> 2
+        # (123): edges among {1,2,3} cycle, edges to 4 cycle -> 0
+        # (1234): 4-cycle on {12,23,34,14}, 2-cycle on {13,24} -> 0
+        chi_edge = np.array([6, 2, 2, 0, 0])
+
+        multiplicities = []
+        for i in range(5):
+            m = np.sum(class_sizes * chi_table[i] * chi_edge) / order_s4
+            multiplicities.append(int(round(m.real)))
+
+        irrep_names = ['trivial_1d', 'sign_1d', 'standard_2d',
+                        'sign_standard_2d', 'perm_minus_1_3d']
+        irrep_dims = [1, 1, 2, 2, 3]
+
+        decomp_parts = []
+        for name, dim, mult in zip(irrep_names, irrep_dims, multiplicities):
+            if mult > 0:
+                decomp_parts.append('%d*%d' % (mult, dim))
+
         return {
-            "trivial (U(1))":       ip(chi_edge, chi_triv),
-            "standard_2D (SU(2))":  ip(chi_edge, chi_2D),
-            "standard_3D (SU(3))":  ip(chi_edge, chi_3D),
-        }
-
-    def run_sampler(self, shots: int = None) -> Dict:
-        """Run symmetry circuit on the configured backend."""
-        qc  = self.create_symmetry_circuit()
-        pub = backend.run_sampler(qc, shots=shots)
-        return {"counts": _extract_counts(pub), "backend": repr(backend)}
-
-
-# =============================================================================
-# 6. RADION SCALAR FIELD
-# =============================================================================
-
-class RadionScalarCircuit:
-    """
-    Radion scalar from dimensional reduction; mixes with Higgs via ς.
-
-    L = ½(∂r)² − ½ m_r² r² + λ_rH r² |H|²
-    """
-
-    def __init__(self, n_sites: int = 4):
-        self.n_sites  = n_sites
-        self.m_radion = MU_0
-        self.mixing   = GS              # graph strain
-
-    def radion_field_circuit(self, t: float = 1.0) -> QuantumCircuit:
-        """Harmonic-oscillator approximation of radion evolution."""
-        qc = QuantumCircuit(self.n_sites, name="Radion")
-        omega = self.m_radion
-        for i in range(self.n_sites):
-            qc.rz(omega * t * GS, i)
-        for i in range(self.n_sites - 1):
-            qc.cx(i, i+1)
-            qc.rz(self.mixing * t, i+1)
-            qc.cx(i, i+1)
-        return qc
-
-    def higgs_radion_mixing(self) -> Dict:
-        """Compute Higgs–radion mixing angle from graph strain."""
-        v, m_H, m_r = 246.0, 125.1, self.m_radion
-        sin_2th = 2 * self.mixing * v**2 / (m_H**2 - m_r**2)
-        th = np.arcsin(sin_2th) / 2
-        return {
-            "m_radion":           m_r,
-            "m_Higgs":            m_H,
-            "mixing_gs":          self.mixing,
-            "sin_2theta":         sin_2th,
-            "theta_degrees":      np.degrees(th),
-            "mixing_suppression": np.cos(th)**2,
+            'edge_character': chi_edge.tolist(),
+            'multiplicities': dict(zip(irrep_names, multiplicities)),
+            'decomposition': '6 = ' + ' + '.join(decomp_parts),
+            'gauge_group_map': {
+                'U(1)_Y': 'trivial (dim %d)' % (multiplicities[0] * 1),
+                'SU(2)_L': 'standard (dim %d)' % (multiplicities[2] * 2),
+                'SU(3)_c': 'perm-1 (dim %d)' % (multiplicities[4] * 3),
+            },
+            'total_dimension': sum(m * d for m, d in
+                                   zip(multiplicities, irrep_dims)),
         }
 
 
-# =============================================================================
-# 7. ENERGY DRESSING
-# =============================================================================
+# ============================================================================
+#  MODULE 3:  C5 EIGENVALUE EXTRACTION (GOLDEN RATIO)
+# ============================================================================
 
-class EnergyDressingCircuit:
+class C5EigenvalueCircuit:
     """
-    Virtual-loop dressing of the bare code-scale energy μ₀.
+    Extract eigenvalues of the C5 (pentagon) adjacency matrix via VQE.
 
-    E_syn = μ₀ × (1 + 8ς)  ≈  28.24 GeV
-    """
+    Eigenvalues of C5 adjacency:
+        lambda_k = 2 cos(2*pi*k/5)  for k = 0, 1, 2, 3, 4
 
-    def __init__(self, n_qubits: int = 5):
-        self.n_qubits = n_qubits
+    Explicitly:
+        lambda_0 = 2                           (k=0)
+        lambda_1 = lambda_4 = 1/phi ~ 0.618    (k=1,4)
+        lambda_2 = lambda_3 = -phi ~ -1.618    (k=2,3)
 
-    def bare_propagator_circuit(self) -> QuantumCircuit:
-        qc = QuantumCircuit(self.n_qubits, name="Bare")
-        qc.rz(2*np.pi * MU_0 / 100, 0)
-        return qc
+    QSD prediction (S1, Theorem 6.1):
+        |lambda_2| / |lambda_1| = phi / (1/phi) = phi^2
 
-    def dressed_propagator_circuit(self, n_loops: int = 1) -> QuantumCircuit:
-        """Dressed propagator with *n_loops* virtual-bubble corrections."""
-        qc = QuantumCircuit(self.n_qubits, name=f"Dressed({n_loops})")
-        dressing = 1 + 8 * GS * n_loops
-        qc.rz(2*np.pi * MU_0 * dressing / 100, 0)
-        for loop in range(n_loops):
-            ctrl = (loop % (self.n_qubits - 1)) + 1
-            qc.h(ctrl)
-            qc.crz(GS * 2*np.pi, ctrl, 0)
-            qc.h(ctrl)
-        return qc
-
-    def compute_dressed_energy(self) -> Dict:
-        dressing = 1 + 8 * GS
-        E_dressed = MU_0 * dressing
-        return {
-            "E_bare_GeV":      MU_0,
-            "dressing_factor":  dressing,
-            "E_dressed_GeV":    E_dressed,
-            "E_syndrome":       E_SYN,
-            "CMS_observation":  28.3,
-            "error_percent":    abs(E_dressed - 28.3)/28.3 * 100,
-        }
-
-
-# =============================================================================
-# 8. RENORMALIZATION LOOPS
-# =============================================================================
-
-class RenormalizationCircuit:
-    """
-    3-loop topological renormalization of α⁻¹.
-
-    α⁻¹ = α⁻¹_tree + Δ₁ − Δ₂ − Δ₃
-
-    Series TERMINATES at 3-loop (finite K₄ ∪ C₅ topology).
-
-    EXACT master relation:  α⁻¹ × ς = 1.9628744…  (not ≈ 2).
+    Qubit encoding: 5 qubits, single-excitation sector.
+        H = (1/2) sum_{(i,j) in C5} (X_i X_j + Y_i Y_j)
     """
 
-    def __init__(self):
-        # Tree level: derived from gauge coupling unification at
-        # the code scale with sin²θ_W = 3/8  (see Main Preprint §5).
-        # The full derivation chain is documented in S4 and TN-2.
-        self.alpha_inv_tree = 136.826
-        self.delta_1 = 0.239          # 1-loop: network friction
-        self.delta_2 = 0.022          # 2-loop: radion feedback
-        self.delta_3 = 0.007          # 3-loop: vacuum drag
-
-    def tree_level_circuit(self) -> QuantumCircuit:
-        qc = QuantumCircuit(1, name="Tree")
-        qc.rz(2*np.pi * self.alpha_inv_tree / 140, 0)
-        return qc
-
-    def one_loop_circuit(self) -> QuantumCircuit:
-        """1-loop: network friction (+0.239)."""
-        qc = QuantumCircuit(3, name="1-loop")
-        qc.rz(2*np.pi * self.alpha_inv_tree / 140, 0)
-        qc.h(1)
-        qc.cx(1, 0)
-        qc.rz(2*np.pi * self.delta_1 / 140, 0)
-        qc.cx(1, 0)
-        qc.h(1)
-        return qc
-
-    def two_loop_circuit(self) -> QuantumCircuit:
-        """2-loop: radion feedback (−0.022)."""
-        qc = QuantumCircuit(4, name="2-loop")
-        qc.rz(2*np.pi*(self.alpha_inv_tree + self.delta_1)/140, 0)
-        qc.h(1); qc.h(2)
-        qc.cx(1, 2)
-        qc.crz(-2*np.pi * self.delta_2 / 140, 2, 0)
-        qc.cx(1, 2)
-        qc.h(1); qc.h(2)
-        return qc
-
-    def three_loop_circuit(self) -> QuantumCircuit:
-        """3-loop: vacuum drag (−0.007).  Series terminates."""
-        qc = QuantumCircuit(5, name="3-loop (FINAL)")
-        base = self.alpha_inv_tree + self.delta_1 - self.delta_2
-        qc.rz(2*np.pi * base / 140, 0)
-        qc.h(1); qc.h(2); qc.h(3)
-        qc.cx(1, 2); qc.cx(2, 3)
-        qc.crz(-2*np.pi * self.delta_3 / 140, 3, 0)
-        qc.cx(2, 3); qc.cx(1, 2)
-        qc.h(1); qc.h(2); qc.h(3)
-        qc.barrier()
-        return qc
-
-    def full_renormalization_result(self) -> Dict:
-        a = self.alpha_inv_tree + self.delta_1 - self.delta_2 - self.delta_3
-        product = a * GS
-        return {
-            "tree":                       self.alpha_inv_tree,
-            "1_loop":                     self.delta_1,
-            "2_loop":                     self.delta_2,
-            "3_loop":                     self.delta_3,
-            "alpha_inv_final":            a,
-            "experimental":               ALPHA_INV,
-            "error_ppm":                  abs(a - ALPHA_INV)/ALPHA_INV * 1e6,
-            "gs":                         GS,
-            "alpha_inv_times_gs_EXACT":   product,
-            "deviation_from_2_percent":   abs(product - 2)/2 * 100,
-        }
-
-
-# =============================================================================
-# 9. SYNDROME PREDICTION (28 GeV)
-# =============================================================================
-
-class SyndromePredictionCircuit:
-    """
-    [[5,1,3]] code syndrome → 28 GeV resonance.
-
-    E_syn = μ₀ × (1 + 8ς)  =  28.244 GeV.
-    """
+    EDGES = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 0)]
 
     def __init__(self):
         self.n_qubits = 5
+        self.eigenvalues_exact = sorted([
+            2.0 * np.cos(2.0 * np.pi * k / 5.0) for k in range(5)
+        ])
+        self._hamiltonian_matrix = self._build_hamiltonian_matrix()
+        self._adjacency_5x5 = self._build_adjacency_5x5()
 
-    def syndrome_encoding_circuit(self) -> QuantumCircuit:
-        """Encode logical |0⟩_L with syndrome-energy phase."""
-        qc = QuantumCircuit(5, 5, name="Syndrome encode")
-        qc.h(0)
-        for i in range(1, 5):
-            qc.cx(0, i)
-        phase = 2*np.pi * E_SYN / 100
-        for i in range(5):
-            qc.rz(phase / 5, i)
-        qc.barrier()
-        qc.measure(range(5), range(5))
-        return qc
+    def _build_adjacency_5x5(self):
+        """Build the 5x5 C5 adjacency matrix."""
+        A = np.zeros((5, 5))
+        for (i, j) in self.EDGES:
+            A[i, j] = 1.0
+            A[j, i] = 1.0
+        return A
 
-    def error_syndrome_detection(self, error_qubit: int = 2,
-                                  error_type: str = "X") -> QuantumCircuit:
-        """Inject a single-qubit error and extract syndrome bits."""
-        qc = QuantumCircuit(5, 4, name="Error detect")
-        qc.h(0)
-        for i in range(1, 5):
-            qc.cx(0, i)
-        qc.barrier()
-        {"X": qc.x, "Y": qc.y, "Z": qc.z}[error_type](error_qubit)
-        qc.barrier()
-        qc.cx(0, 1); qc.cx(1, 2); qc.cx(2, 3); qc.cx(3, 4)
-        qc.measure([1, 2, 3, 4], [0, 1, 2, 3])
-        return qc
+    def _build_hamiltonian_matrix(self):
+        """XX+YY hopping Hamiltonian on 5 qubits (32x32)."""
+        dim = 2 ** self.n_qubits
+        H = np.zeros((dim, dim), dtype=complex)
 
-    def syndrome_energy_prediction(self) -> Dict:
-        dressing = 1 + 8 * GS
-        E_pred   = MU_0 * dressing
+        for (i, j) in self.EDGES:
+            for pauli in [SX, SY]:
+                ops = [I2] * self.n_qubits
+                ops[i] = pauli
+                ops[j] = pauli
+                H += kron_list(ops) / 2.0
+
+        return H
+
+    def hamiltonian_as_sparse_pauli_op(self):
+        """Build as Qiskit SparsePauliOp (10 terms)."""
+        if not QISKIT_AVAILABLE:
+            raise RuntimeError('Qiskit not available')
+
+        labels = []
+        coeffs = []
+        for (i, j) in self.EDGES:
+            for pp in ['XX', 'YY']:
+                pauli_str = ['I'] * self.n_qubits
+                pauli_str[i] = pp[0]
+                pauli_str[j] = pp[1]
+                labels.append(''.join(reversed(pauli_str)))
+                coeffs.append(0.5)
+
+        return SparsePauliOp(labels, coeffs)
+
+    # ------------------------------------------------------------------
+    # Exact analysis
+    # ------------------------------------------------------------------
+
+    def exact_spectrum(self):
+        """Full spectrum analysis: 5x5 adjacency and 32-dim qubit Hamiltonian."""
+        evals_5x5 = np.sort(np.linalg.eigvalsh(self._adjacency_5x5))
+        evals_32 = np.sort(np.linalg.eigvalsh(self._hamiltonian_matrix).real)
+
+        # Extract single-excitation sector from 32-dim
+        single_exc_indices = [2**(self.n_qubits - 1 - k) for k in range(5)]
+        H_single = np.zeros((5, 5), dtype=complex)
+        for a, idx_a in enumerate(single_exc_indices):
+            for b, idx_b in enumerate(single_exc_indices):
+                H_single[a, b] = self._hamiltonian_matrix[idx_a, idx_b]
+        evals_single = np.sort(np.linalg.eigvalsh(H_single).real)
+
+        phi = GOLDEN_RATIO
+        lambda_neg = evals_5x5[0]     # -phi
+        lambda_pos = evals_5x5[2]     # 1/phi
+
+        ratio = abs(lambda_neg) / lambda_pos
+        expected_ratio = phi ** 2
+
         return {
-            "mu_0_GeV":                    MU_0,
-            "graph_strain":                GS,
-            "dressing_factor":             dressing,
-            "E_syndrome_prediction_GeV":   E_pred,
-            "CMS_dimuon_excess_GeV":       28.3,
-            "agreement_percent":           100 - abs(E_pred-28.3)/28.3*100,
-            "alpha_inv_times_gs_EXACT":    ALPHA_GS_PRODUCT,
-            "deviation_from_2_percent":    (2 - ALPHA_GS_PRODUCT)/2 * 100,
+            'adjacency_eigenvalues': evals_5x5.tolist(),
+            'single_excitation_eigenvalues': evals_single.tolist(),
+            'eigenvalues_match': np.allclose(evals_5x5, evals_single),
+            'lambda_neg': lambda_neg,
+            'lambda_pos': lambda_pos,
+            'ratio_magnitude': ratio,
+            'phi_squared': expected_ratio,
+            'golden_ratio_verified': abs(ratio - expected_ratio) < 1e-12,
+            'phi_squared_error': abs(ratio - expected_ratio),
         }
 
-    def run_sampler(self, shots: int = None) -> Dict:
-        """Run syndrome-encoding circuit on the configured backend."""
-        qc  = self.syndrome_encoding_circuit()
-        pub = backend.run_sampler(qc, shots=shots)
-        return {"counts": _extract_counts(pub), "backend": repr(backend)}
+    # ------------------------------------------------------------------
+    # VQE in the single-excitation subspace
+    # ------------------------------------------------------------------
 
-    def run_error_detection(self, error_qubit: int = 2,
-                            error_type: str = "X",
-                            shots: int = None) -> Dict:
-        """Run error-detection circuit and return syndrome counts."""
-        qc  = self.error_syndrome_detection(error_qubit, error_type)
-        pub = backend.run_sampler(qc, shots=shots)
-        return {"counts": _extract_counts(pub),
-                "error_qubit": error_qubit,
-                "error_type":  error_type,
-                "backend":     repr(backend)}
+    def excitation_preserving_ansatz(self, params, initial_qubit=0,
+                                     n_layers=2):
+        """
+        Ansatz preserving single-excitation sector.
+
+        Works in the 5-dim subspace directly with Givens rotations
+        between adjacent sites (C5 edge structure).
+        """
+        state = np.zeros(5, dtype=complex)
+        state[initial_qubit] = 1.0
+
+        p_idx = 0
+        for layer in range(n_layers):
+            for edge_idx, (i, j) in enumerate(self.EDGES):
+                if p_idx >= len(params):
+                    break
+                theta = params[p_idx]
+                p_idx += 1
+
+                c = np.cos(theta)
+                s = np.sin(theta)
+                new_i = c * state[i] - s * state[j]
+                new_j = s * state[i] + c * state[j]
+                state[i] = new_i
+                state[j] = new_j
+
+        return state
+
+    def vqe_eigenvalue(self, target='ground', n_layers=3,
+                       n_restarts=10, maxiter=300):
+        """
+        Find eigenvalues of C5 adjacency via VQE.
+
+        target='ground': find lowest eigenvalue
+        target='all': find all distinct eigenvalues via deflation
+        """
+        n_params = 5 * n_layers
+        A = self._adjacency_5x5.copy()
+
+        if target == 'ground':
+            return self._vqe_single(A, n_params, n_layers, n_restarts,
+                                    maxiter, label='ground')
+
+        elif target == 'all':
+            found_eigenvalues = []
+            found_eigenvectors = []
+            A_deflated = A.copy()
+
+            # 3 distinct eigenvalues for C5: -phi (x2), 1/phi (x2), 2 (x1)
+            # Deflation with degeneracy awareness: if we find an eigenvalue
+            # we already have, apply stronger penalty to the full subspace
+            tol_degenerate = 0.05
+
+            for level in range(5):  # up to 5 attempts for 3 distinct values
+                result = self._vqe_single(
+                    A_deflated, n_params, n_layers, n_restarts, maxiter,
+                    label='level_%d' % level)
+
+                ev = result['eigenvalue']
+                evec = result['eigenvector']
+
+                # Check if this is a genuinely new eigenvalue
+                is_new = True
+                for prev_ev in found_eigenvalues:
+                    if abs(ev - prev_ev) < tol_degenerate:
+                        is_new = False
+                        break
+
+                if is_new:
+                    found_eigenvalues.append(ev)
+                found_eigenvectors.append(evec)
+
+                # Always deflate the found eigenvector
+                penalty = 20.0 * (abs(ev) + 1.0)
+                A_deflated = (A_deflated
+                              + penalty * np.outer(evec, evec.conj()).real)
+
+                if len(found_eigenvalues) >= 3:
+                    break
+
+            exact_distinct = sorted(set([
+                round(e, 10) for e in np.linalg.eigvalsh(A).tolist()
+            ]))
+            found_sorted = sorted(found_eigenvalues)
+
+            # Golden ratio: ratio of distinct non-zero eigenvalue magnitudes
+            # We need |lambda_neg| / lambda_pos where lambda_neg < 0 < lambda_pos
+            neg_vals = [e for e in found_sorted if e < -0.1]
+            pos_vals = [e for e in found_sorted if 0.1 < e < 1.9]
+            if neg_vals and pos_vals:
+                vqe_ratio = abs(neg_vals[0]) / pos_vals[0]
+            else:
+                vqe_ratio = None
+
+            return {
+                'found_eigenvalues': found_sorted,
+                'exact_eigenvalues': exact_distinct,
+                'ratio': vqe_ratio,
+                'phi_squared': GOLDEN_RATIO_SQ,
+            }
+
+    def _vqe_single(self, A, n_params, n_layers, n_restarts, maxiter,
+                     label=''):
+        """Run VQE for a single eigenvalue."""
+        best_energy = np.inf
+        best_params = None
+        best_state = None
+        best_init_q = 0
+
+        for restart in range(n_restarts):
+            np.random.seed(137 + restart)
+            x0 = np.random.uniform(-np.pi, np.pi, n_params)
+
+            for init_q in range(5):
+                def cost(params, iq=init_q):
+                    state = self.excitation_preserving_ansatz(
+                        params, initial_qubit=iq, n_layers=n_layers)
+                    return (state.conj() @ A @ state).real
+
+                result = minimize(cost, x0, method='COBYLA',
+                                  options={'maxiter': maxiter})
+
+                if result.fun < best_energy:
+                    best_energy = result.fun
+                    best_params = result.x.copy()
+                    best_init_q = init_q
+                    best_state = self.excitation_preserving_ansatz(
+                        best_params, initial_qubit=init_q,
+                        n_layers=n_layers)
+
+        return {
+            'eigenvalue': best_energy,
+            'eigenvector': best_state,
+            'label': label,
+        }
+
+    # ------------------------------------------------------------------
+    # Laplacian (Mathieu connection)
+    # ------------------------------------------------------------------
+
+    def laplacian_spectrum(self):
+        """
+        Spectrum of C5 graph Laplacian L = D - A.
+
+        Laplacian eigenvalues:
+            mu_k = 2 - 2 cos(2 pi k / 5)
+
+        Ratio of non-zero eigenvalues:
+            mu_max / mu_min = (5+sqrt(5))/(5-sqrt(5)) = phi^2
+
+        This determines the Mathieu equation parameters (S3, Section 3).
+        """
+        A = self._adjacency_5x5
+        D = 2.0 * np.eye(5)
+        L = D - A
+
+        evals_L = np.sort(np.linalg.eigvalsh(L))
+
+        mu_min = evals_L[1]
+        mu_max = evals_L[3]
+        ratio = mu_max / mu_min
+
+        mu_min_exact = (5.0 - np.sqrt(5.0)) / 2.0
+        mu_max_exact = (5.0 + np.sqrt(5.0)) / 2.0
+
+        return {
+            'laplacian_eigenvalues': evals_L.tolist(),
+            'mu_min': mu_min,
+            'mu_max': mu_max,
+            'mu_min_exact': mu_min_exact,
+            'mu_max_exact': mu_max_exact,
+            'ratio': ratio,
+            'phi_squared': GOLDEN_RATIO_SQ,
+            'ratio_match': abs(ratio - GOLDEN_RATIO_SQ) < 1e-12,
+            'mathieu_connection': (
+                'Laplacian eigenvalues set Mathieu potential '
+                'V(theta) = V0(1 - cos 5*theta) parameters (S3)'),
+        }
+
+    def verify_golden_ratio(self):
+        """Complete golden ratio verification using all methods."""
+        exact = self.exact_spectrum()
+        vqe_all = self.vqe_eigenvalue(target='all', n_layers=3, n_restarts=8)
+        lap = self.laplacian_spectrum()
+
+        return {
+            'exact_eigenvalues': exact['adjacency_eigenvalues'],
+            'exact_ratio': exact['ratio_magnitude'],
+            'exact_phi_sq_match': exact['golden_ratio_verified'],
+            'vqe_eigenvalues': vqe_all['found_eigenvalues'],
+            'vqe_ratio': vqe_all.get('ratio'),
+            'laplacian_ratio': lap['ratio'],
+            'laplacian_match': lap['ratio_match'],
+            'phi_squared': GOLDEN_RATIO_SQ,
+        }
 
 
-# =============================================================================
-# CONVENIENCE: create all example circuits
-# =============================================================================
+# ============================================================================
+#  HARDWARE EXECUTION HELPERS
+# ============================================================================
 
-def create_example_circuits() -> Dict[str, QuantumCircuit]:
-    """Return a dict of named QSD demonstration circuits."""
-    circuits = {}
-    circuits["c5_golden_ratio"]    = GoldenRatioCircuit().create_visualization_circuit()
-    circuits["holographic_bit"]    = HolographicBitDensity().information_channel_circuit()
-    circuits["k4_trotter_step"]    = K4HeisenbergCircuit().heisenberg_trotter_step(dt=0.1)
-    circuits["k4_ground_state"]    = K4HeisenbergCircuit().prepare_singlet_ground_state()
-    circuits["mathieu_potential"]  = MathieuPotentialCircuit().mathieu_hamiltonian_circuit()
-    circuits["s4_symmetry"]        = GaugeForceEmergence().create_symmetry_circuit()
-    circuits["radion_field"]       = RadionScalarCircuit().radion_field_circuit()
-    circuits["bare_propagator"]    = EnergyDressingCircuit().bare_propagator_circuit()
-    circuits["dressed_propagator"] = EnergyDressingCircuit().dressed_propagator_circuit(n_loops=3)
-    circuits["tree_level"]         = RenormalizationCircuit().tree_level_circuit()
-    circuits["1_loop"]             = RenormalizationCircuit().one_loop_circuit()
-    circuits["2_loop"]             = RenormalizationCircuit().two_loop_circuit()
-    circuits["3_loop"]             = RenormalizationCircuit().three_loop_circuit()
-    circuits["syndrome_encode"]    = SyndromePredictionCircuit().syndrome_encoding_circuit()
-    circuits["error_detection"]    = SyndromePredictionCircuit().error_syndrome_detection()
-    return circuits
+@dataclass
+class HardwareConfig:
+    """Configuration for IBM Quantum hardware execution."""
+    use_hardware: bool = False
+    backend_name: str = 'ibm_brisbane'
+    optimization_level: int = 3
+    n_shots: int = 4096
+    resilience_level: int = 1
+
+    def get_backend(self):
+        if not self.use_hardware:
+            if AER_AVAILABLE:
+                return AerSimulator()
+            raise RuntimeError('Aer not available')
+        else:
+            try:
+                from qiskit_ibm_runtime import QiskitRuntimeService
+                service = QiskitRuntimeService()
+                return service.backend(self.backend_name)
+            except ImportError:
+                raise RuntimeError(
+                    'qiskit-ibm-runtime required for hardware execution')
 
 
-# =============================================================================
-# FULL SUITE RUNNER
-# =============================================================================
+# ============================================================================
+#  MAIN EXECUTION
+# ============================================================================
 
-def run_all(use_hardware: bool = False,
-            backend_name: str  = None,
-            shots: int         = None,
-            auto_select: bool  = False) -> Dict:
-    """
-    Run the complete QSD Qiskit simulation suite.
-
-    Parameters
-    ----------
-    use_hardware : bool
-        True → IBM Quantum hardware.
-    backend_name : str | None
-        IBM backend name.  None keeps current setting.
-    shots : int | None
-        Override shot count.  None keeps current setting.
-    auto_select : bool
-        If True, pick the least-busy IBM backend.
-
-    Returns
-    -------
-    dict  with results keyed by simulation name.
-    """
-    # ── configure ────────────────────────────────────────────────────
-    configure_backend(use_hardware=use_hardware,
-                      backend_name=backend_name or backend.backend_name,
-                      shots=shots or backend.shots,
-                      auto_select=auto_select)
-
-    print("\n" + "="*70)
-    print("QSD QISKIT SIMULATION SUITE")
-    print("="*70)
-
-    # ── constants report ─────────────────────────────────────────────
-    print("\nEXACT QSD CONSTANTS")
-    print("-"*70)
-    print(f"  φ  (golden ratio)      = {PHI}")
-    print(f"  Hb₄                    = {Hb4}")
-    print(f"  ς  (graph strain)      = {GS}")
-    print(f"  α⁻¹                    = {ALPHA_INV}")
-    print(f"  α⁻¹ × ς               = {ALPHA_GS_PRODUCT:.10f}  (exact, ≠ 2)")
-    print(f"  μ₀                     = {MU_0:.4f} GeV")
-    print(f"  E_syn                  = {E_SYN:.4f} GeV")
-
+def run_all(use_hardware=False):
+    """Run all three core QSD Qiskit simulations."""
     results = {}
+    sep = '=' * 70
 
-    # 1 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("1. GOLDEN RATIO EMERGENCE FROM C₅")
-    print("-"*70)
-    gr = GoldenRatioCircuit()
-    r  = gr.run_estimator()
-    results["golden_ratio"] = r
-    print(f"  λ₁  = {r['lambda_1']:.6f}")
-    print(f"  λ₂  = {r['lambda_2']:.6f}")
-    print(f"  λ₂/λ₁ = {r['ratio']:.10f}")
-    print(f"  φ²     = {r['phi_squared']:.10f}")
-    print(f"  Match: {r['match']}")
-    if r.get("estimator_expectation") is not None:
-        print(f"  ⟨A_C₅⟩ (estimator) = {r['estimator_expectation']:.6f}")
+    # ------------------------------------------------------------------
+    # Module 1: [[5,1,3]] Syndrome Extraction
+    # ------------------------------------------------------------------
+    print('\n' + sep)
+    print('  MODULE 1:  [[5,1,3]] Quantum Error-Correcting Code')
+    print(sep + '\n')
 
-    # 2 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("2. HOLOGRAPHIC BIT DENSITY Hb₄")
-    print("-"*70)
-    hb = HolographicBitDensity()
-    r  = hb.run()
-    results["holographic_bit"] = r
-    print(f"  Hb₄              = {r['Hb4']:.10f}")
-    print(f"  Measured entropy  = {r['measured_entropy']:.4f}")
-    print(f"  Expected entropy  = {r['expected_entropy']:.4f}")
+    code = Code513Circuit()
+    code.print_syndrome_table()
 
-    # 3 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("3. K₄ HEISENBERG EXCHANGE")
-    print("-"*70)
-    k4 = K4HeisenbergCircuit()
-    r  = k4.measure_ground_state_energy()
-    results["heisenberg"] = r
-    print(f"  J = Hb₄ = {r['J']:.6f}")
-    print(f"  Measured E₀  = {r['measured_energy']:.6f}")
-    print(f"  Expected E₀  = −3J/2 = {r['expected_energy']:.6f}")
-    print(f"  Error: {r['error_percent']:.4f}%")
+    print('\nStatevector syndrome verification:')
+    sv_results = code.run_all_syndromes_statevector()
+    results['code513_statevector'] = sv_results
 
-    # 4 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("4. MATHIEU POTENTIAL")
-    print("-"*70)
-    mp = MathieuPotentialCircuit()
-    results["mathieu"] = {"lambda1": mp.lambda1,
-                          "E0": mp.ground_state_energy()}
-    print(f"  λ₁ = {mp.lambda1:.6f}")
-    print(f"  Ground-state energy ≈ {mp.ground_state_energy():.6f}")
+    n_pass = sum(1 for r in sv_results['results'] if r['match'])
+    n_total_r = len(sv_results['results'])
+    print('  Passed: %d/%d' % (n_pass, n_total_r))
+    print('  All match: %s' % sv_results['all_match'])
+    print('  Hamming bound: %s' % sv_results['hamming_bound'])
 
-    # 5 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("5. GAUGE FORCE EMERGENCE FROM S₄")
-    print("-"*70)
-    gf = GaugeForceEmergence()
-    decomp = gf.decompose_edge_representation()
-    results["gauge_force"] = decomp
-    print("  6 = " + " ⊕ ".join(f"{int(v)}×{k}" for k,v in decomp.items()))
-    print("  → U(1)_Y ⊕ SU(2)_L ⊕ SU(3)_c")
+    print('\n  Sample results:')
+    for r in sv_results['results'][:6]:
+        status = 'OK' if r['match'] else 'FAIL'
+        print('    Error %3s: syndrome %s (%2d) -> %3s  %s' % (
+            r['error'], r['syndrome_binary'], r['syndrome_int'],
+            r['predicted_error'], status))
+    print('    ... (%d more)' % (n_total_r - 6))
 
-    # 6 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("6. RADION SCALAR FIELD")
-    print("-"*70)
-    rad = RadionScalarCircuit()
-    r   = rad.higgs_radion_mixing()
-    results["radion"] = r
-    print(f"  Radion mass:  {r['m_radion']:.2f} GeV")
-    print(f"  Higgs mass:   {r['m_Higgs']:.2f} GeV")
-    print(f"  Graph strain: {r['mixing_gs']:.6f}")
-    print(f"  Mixing angle: {r['theta_degrees']:.4f}°")
+    if QISKIT_AVAILABLE and AER_AVAILABLE:
+        print('\nCircuit-based syndrome verification (Aer, 4096 shots):')
+        circ_results = code.run_all_syndromes_circuit(n_shots=4096)
+        results['code513_circuit'] = circ_results
+        n_pass_c = sum(1 for r in circ_results['results'] if r['match'])
+        print('  Passed: %d/%d' % (n_pass_c, len(circ_results['results'])))
+        avg_fid = np.mean([r['fidelity'] for r in circ_results['results']])
+        print('  Average syndrome fidelity: %.4f' % avg_fid)
+    else:
+        print('\n  [Qiskit/Aer not available -- circuit test skipped]')
 
-    # 7 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("7. ENERGY DRESSING")
-    print("-"*70)
-    ed = EnergyDressingCircuit()
-    r  = ed.compute_dressed_energy()
-    results["energy_dressing"] = r
-    print(f"  Bare μ₀:          {r['E_bare_GeV']:.4f} GeV")
-    print(f"  Dressing (1+8ς):  {r['dressing_factor']:.6f}")
-    print(f"  Dressed energy:   {r['E_dressed_GeV']:.4f} GeV")
-    print(f"  CMS observation:  {r['CMS_observation']:.1f} GeV")
-    print(f"  Agreement: {100 - r['error_percent']:.2f}%")
+    # ------------------------------------------------------------------
+    # Module 2: K4 Heisenberg VQE
+    # ------------------------------------------------------------------
+    print('\n' + sep)
+    print('  MODULE 2:  K4 Heisenberg Antiferromagnet (VQE)')
+    print(sep + '\n')
 
-    # 8 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("8. 3-LOOP RENORMALIZATION")
-    print("-"*70)
-    rn = RenormalizationCircuit()
-    r  = rn.full_renormalization_result()
-    results["renormalization"] = r
-    print(f"  Tree level: {r['tree']:.3f}")
-    print(f"  1-loop:     +{r['1_loop']:.3f}")
-    print(f"  2-loop:     −{r['2_loop']:.3f}")
-    print(f"  3-loop:     −{r['3_loop']:.3f}")
-    print(f"  {'─'*40}")
-    print(f"  α⁻¹ (QSD): {r['alpha_inv_final']:.6f}")
-    print(f"  α⁻¹ (exp): {r['experimental']:.6f}")
-    print(f"  Error:      {r['error_ppm']:.1f} ppm")
-    print(f"\n  MASTER RELATION (EXACT):")
-    print(f"  α⁻¹ × ς = {r['alpha_inv_times_gs_EXACT']:.10f}")
-    print(f"  Deviation from 2: {r['deviation_from_2_percent']:.2f}%")
+    k4 = K4HeisenbergVQE()
 
-    # 9 ───────────────────────────────────────────────────────────────
-    print("\n" + "-"*70)
-    print("9. SYNDROME PREDICTION (28 GeV)")
-    print("-"*70)
-    sp = SyndromePredictionCircuit()
-    r  = sp.syndrome_energy_prediction()
-    results["syndrome"] = r
-    print(f"  Base scale μ₀:   {r['mu_0_GeV']:.4f} GeV")
-    print(f"  Graph strain ς:  {r['graph_strain']:.10f}")
-    print(f"  Dressing factor: {r['dressing_factor']:.10f}")
-    print(f"  {'─'*40}")
-    print(f"  E_syn (QSD):       {r['E_syndrome_prediction_GeV']:.4f} GeV")
-    print(f"  CMS dimuon excess: {r['CMS_dimuon_excess_GeV']:.1f} GeV")
-    print(f"  Agreement:         {r['agreement_percent']:.2f}%")
-    print(f"\n  α⁻¹ × ς (EXACT):  {r['alpha_inv_times_gs_EXACT']:.10f}")
+    spec = k4.exact_spectrum()
+    results['k4_exact'] = spec
 
-    # ── summary ──────────────────────────────────────────────────────
-    print("\n" + "="*70)
-    print("SUMMARY")
-    print("="*70)
-    print(f"  Backend: {backend}")
-    print(f"  All constants derived from geometry (zero free parameters after M_Pl)")
-    print(f"  Master relation  α⁻¹ × ς = {ALPHA_GS_PRODUCT:.10f}  (exact)")
-    print("="*70)
+    print('Coupling J = Hb4 = 1/(4 ln 2) = %.12f' % k4.J)
+    print('\nExact spectrum:')
+    for E, d in spec['energy_levels']:
+        print('  E = %+.12f   degeneracy = %d' % (E, d))
+    print('\nGround state:')
+    print('  Computed:  %.12f' % spec['ground_state_energy'])
+    print('  Expected:  %.12f' % spec['expected_ground'])
+    print('  Error:     %.2e' % spec['ground_error'])
+    print('\nDegeneracies: %s (expected: %s)' % (
+        spec['degeneracies'], spec['expected_degeneracies']))
+
+    s4 = k4.s4_decomposition()
+    results['k4_s4'] = s4
+    print('\nS4 edge representation: %s' % s4['decomposition'])
+    for group, irrep in s4['gauge_group_map'].items():
+        print('    %10s <- %s' % (group, irrep))
+
+    print('\nRunning VQE (2 layers, 5 restarts)...')
+    vqe = k4.run_vqe(n_layers=2, n_restarts=5, maxiter=500)
+    results['k4_vqe'] = vqe
+    print('  VQE ground:   %.12f' % vqe['vqe_ground_energy'])
+    print('  Exact ground:  %.12f' % vqe['exact_ground_energy'])
+    print('  VQE error: %.6f%%' % vqe['vqe_error_percent'])
+
+    print('\nTime evolution (t=10, 200 steps)...')
+    tevol = k4.time_evolution_exact(t_total=10.0, n_steps=200)
+    results['k4_time_evolution'] = tevol
+    print('  Energy conservation: max deviation = %.2e' %
+          tevol['energy_conservation'])
+
+    # ------------------------------------------------------------------
+    # Module 3: C5 Eigenvalue Extraction
+    # ------------------------------------------------------------------
+    print('\n' + sep)
+    print('  MODULE 3:  C5 Pentagon Eigenvalues (Golden Ratio)')
+    print(sep + '\n')
+
+    c5 = C5EigenvalueCircuit()
+
+    exact_c5 = c5.exact_spectrum()
+    results['c5_exact'] = exact_c5
+
+    print('C5 adjacency eigenvalues:')
+    for i, ev in enumerate(exact_c5['adjacency_eigenvalues']):
+        print('  lambda_%d = %+.12f' % (i, ev))
+    print('\nSingle-excitation match: %s' % exact_c5['eigenvalues_match'])
+    print('\nGolden ratio:')
+    print('  |lambda_neg|/lambda_pos = %.12f' % exact_c5['ratio_magnitude'])
+    print('  phi^2                   = %.12f' % exact_c5['phi_squared'])
+    print('  Match (12 dec):           %s' % exact_c5['golden_ratio_verified'])
+
+    lap = c5.laplacian_spectrum()
+    results['c5_laplacian'] = lap
+    print('\nLaplacian eigenvalues: %s' %
+          ['%.6f' % e for e in lap['laplacian_eigenvalues']])
+    print('  mu_max/mu_min = %.12f = phi^2 ? %s' % (
+        lap['ratio'], lap['ratio_match']))
+
+    print('\nRunning VQE for all eigenvalues (deflation)...')
+    vqe_c5 = c5.vqe_eigenvalue(target='all', n_layers=3, n_restarts=8)
+    results['c5_vqe'] = vqe_c5
+    print('  VQE eigenvalues:  %s' %
+          ['%.6f' % e for e in vqe_c5['found_eigenvalues']])
+    print('  Exact (distinct): %s' %
+          ['%.6f' % e for e in vqe_c5['exact_eigenvalues']])
+    if vqe_c5.get('ratio') is not None:
+        print('  VQE ratio:  %.6f' % vqe_c5['ratio'])
+        print('  phi^2:      %.6f' % vqe_c5['phi_squared'])
+
+    # ------------------------------------------------------------------
+    # Summary
+    # ------------------------------------------------------------------
+    print('\n' + sep)
+    print('  SUMMARY')
+    print(sep)
+
+    print('\n  [[5,1,3]] Code:')
+    print('    Syndrome extraction:  %s' %
+          ('PASS' if sv_results['all_match'] else 'FAIL'))
+    print('    Hamming bound:        SATURATED (16 = 1 + 3*5)')
+    print('    Distinct syndromes:   %d/16' %
+          sv_results['n_distinct_syndromes'])
+
+    print('\n  K4 Heisenberg (J = Hb4):')
+    print('    Ground E0 = -3J/2:    %.2e error' % spec['ground_error'])
+    print('    Degeneracies [2,9,5]: %s' %
+          (spec['degeneracies'] == spec['expected_degeneracies']))
+    print('    S4: 6 = 1+2+3:       %s' % (s4['total_dimension'] == 6))
+    print('    VQE accuracy:         %.6f%%' % vqe['vqe_error_percent'])
+
+    print('\n  C5 Pentagon:')
+    print('    phi^2 (adjacency):    %s' % exact_c5['golden_ratio_verified'])
+    print('    phi^2 (Laplacian):    %s' % lap['ratio_match'])
+    print('    VQE levels found:     %d' % len(vqe_c5['found_eigenvalues']))
+
+    print('\n  QSD Triad:')
+    print('    Hb4   = %.12f  (K4 exchange)' % HB4)
+    print('    sigma = %.12f  (K4-C5 strain)' % SIGMA)
+    print('    varpi = %.12f  (C5 spectral bond)' % VARPI)
 
     return results
 
 
-# =============================================================================
-# __main__
-# =============================================================================
+if __name__ == '__main__':
+    print('QSD Qiskit Simulation Suite -- Core Circuits')
+    print('Qiskit available: %s' % QISKIT_AVAILABLE)
+    print('Aer available:    %s' % AER_AVAILABLE)
+    print('Mode: %s' % ('numpy fallback' if not QISKIT_AVAILABLE
+                         else 'full Qiskit'))
 
-if __name__ == "__main__":
-    # Default: local simulator.
-    # For hardware:  python qsd_qiskit_suite.py --hw --backend ibm_brisbane
-    import sys
-    hw   = "--hw" in sys.argv
-    name = None
-    for i, a in enumerate(sys.argv):
-        if a == "--backend" and i+1 < len(sys.argv):
-            name = sys.argv[i+1]
-    run_all(use_hardware=hw, backend_name=name)
+    results = run_all(use_hardware=False)

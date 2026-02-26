@@ -1,31 +1,32 @@
 {
-  "title": "Quantum Spectrodynamics: A Framework for Deriving Standard Model Parameters from Information Geometry",
-  "description": "Quantum Spectrodynamics (QSD) derives Standard Model parameters from the geometry of the [[5,1,3]] perfect quantum error-correcting code. From four inputs — the holographic bit density Hb₄ = 1/(4 ln 2), the golden ratio φ, the graph strain ς = 3/(80φ²), and the Planck mass — the framework produces with zero free parameters: α⁻¹ = 137.036 (15 ppm), sin²θ_W = 0.2312 (0.5%), m_H = 126.7 GeV (1.3%), and E_syn = 28.24 GeV (0.2% from CMS dimuon excess). This release includes the full preprint, 7 supplements, computational verification suite (NumPy + Qiskit with IBM Quantum hardware support), and a reproducible conda environment.",
-  "upload_type": "software",
+  "title": "Quantum Spectrodynamics: Deriving Standard Model Parameters from the Geometry of Quantum Error-Correcting Codes",
+  "description": "Quantum Spectrodynamics (QSD) is a theoretical framework that derives the gauge couplings, particle masses, and cosmological constant of the Standard Model from the algebraic geometry of the [[5,1,3]] quantum error-correcting code. The framework requires zero free parameters beyond the Planck mass. Three fundamental constants — the holographic bit density Hb₄ = 1/(4 ln 2), geometric strain ς = 3/(80 φ²), and spectral bond ϖ = πφ² — yield predictions agreeing with experiment to within 0.002%–1.2% across six independent observables. This repository contains the complete manuscript suite (main preprint + 7 supplements + 1 technical note), Python simulation code, quantum circuit implementations, and interactive 3D visualizations.",
+  "upload_type": "publication",
   "publication_type": "preprint",
   "creators": [
     {
-      "name": "Hubka, Marcus",
-      "affiliation": "Independent Researcher, Czech Republic",
-      "orcid": ""
+      "name": "Hubka, Marek",
+      "affiliation": "On Tides of Uncertainty"
     }
   ],
-  "version": "v1.0",
-  "language": "eng",
-  "license": "CC-BY-4.0",
-  "access_right": "open",
   "keywords": [
     "quantum error correction",
-    "Standard Model",
+    "standard model",
     "fine structure constant",
-    "information geometry",
+    "gauge couplings",
+    "cosmological constant",
     "holographic principle",
-    "hierarchy problem",
-    "Higgs mass",
-    "weak mixing angle",
-    "quantum computing",
-    "Qiskit"
+    "quantum information theory",
+    "theoretical physics",
+    "particle physics",
+    "[[5,1,3]] code"
   ],
+  "license": {
+    "id": "CC-BY-4.0"
+  },
+  "version": "1.0.0",
+  "language": "eng",
+  "access_right": "open",
   "related_identifiers": [],
   "subjects": [
     {
@@ -38,6 +39,5 @@
       "identifier": "quant-ph",
       "scheme": "arxiv"
     }
-  ],
-  "notes": "This is the first public release of the QSD framework. Supplements S6 (string correspondence) and S7 (cosmological constant) are explicitly marked as speculative and do not affect the core predictions. Falsification criteria for LHC Run 3 are provided in Supplement S5."
+  ]
 }

@@ -1,0 +1,45 @@
+# LaTeX build artifacts
+tex/*.aux
+tex/*.bbl
+tex/*.blg
+tex/*.log
+tex/*.out
+tex/*.toc
+tex/*.lof
+tex/*.lot
+tex/*.nav
+tex/*.snm
+tex/*.vrb
+tex/*.fdb_latexmk
+tex/*.fls
+tex/*.synctex.gz
+tex/*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Conda
+.conda/
+
+# Generated figures (reproducible from code)
+code/figures/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/

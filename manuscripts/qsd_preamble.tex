@@ -1,0 +1,221 @@
+% ============================================================================
+%  QSD UNIFIED PREAMBLE — qsd_preamble.tex
+%  Version 1.0 — February 2026
+% ============================================================================
+%  Usage:  \usepackage{qsd_preamble}   (place qsd_preamble.sty in same dir)
+%  Or:     \input{qsd_preamble}         (if using .tex extension instead)
+%
+%  This file provides ALL shared macros, colors, and theorem environments
+%  for the QSD document suite: preprint, supplements S1–S7, and technical
+%  notes. Document-specific macros are in clearly marked optional sections
+%  at the end — uncomment as needed or define locally.
+%
+%  CONVENTION DECISIONS:
+%    - Subscript labels use \mathrm{} (not \text{}), for robustness in
+%      all math environments (align, gather, subscripts of subscripts).
+%    - Geometric strain symbol: \gs (short) = \strain (alias) = ς (varsigma)
+%    - Spectral bond: \specbond = ϖ (varpi)
+%    - Golden ratio: \gr = φ (varphi)
+%    - Planck mass: M_Pl (with full "Pl", not just "P")
+% ============================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{qsd_preamble}[2026/02/21 QSD Unified Notation v1.0]
+
+% ============================================================================
+%  §1  REQUIRED PACKAGES
+% ============================================================================
+%  These are loaded by all QSD documents. Individual documents may load
+%  additional packages (e.g. cancel, float, caption) as needed.
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{amsmath,amssymb,amsthm,mathtools}
+\RequirePackage{geometry}
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage{xcolor}
+\RequirePackage{physics}
+\RequirePackage{graphicx}
+\RequirePackage{hyperref}
+\RequirePackage{enumitem}
+\RequirePackage{float}
+\RequirePackage{tikz}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\usetikzlibrary{
+  shapes,
+  arrows.meta,
+  positioning,
+  calc,
+  decorations.pathmorphing,
+  decorations.markings,
+  decorations.text,
+  decorations.pathreplacing,
+  patterns
+}
+
+% ============================================================================
+%  §2  THEOREM ENVIRONMENTS
+% ============================================================================
+%  Superset of all environments used across the document suite.
+%  Numbered within section; all share a single counter.
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{axiom}{Axiom}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{question}[theorem]{Open Question}
+
+
+% ============================================================================
+%  §3  THE QSD TRIAD — Core Constants
+% ============================================================================
+
+% --- Holographic bit density ---
+%  Hb is the "logo" glyph: upright H with tight-kerned b
+\newcommand{\Hb}{\textnormal{H\kern-0.3em b}}
+\newcommand{\Hbn}{\Hb_n}              % Generic Hb_n
+\newcommand{\Hbfour}{\Hb_4}           % Hb_4 = 1/(4 ln 2)
+\newcommand{\Hbtwo}{\Hb_2}            % Hb_2 = 1/(2 ln 2)  [TN1]
+
+% --- Geometric strain ---
+%  ς = 3/(80φ²), derived from C₅ graph invariants
+%  Two names, same symbol — use whichever reads better in context
+\newcommand{\gs}{\varsigma}            % Short form (preprint, S1, S4)
+\newcommand{\strain}{\varsigma}        % Long form  (S3, S5, S6, S7, TN1)
+
+% --- Spectral bond ---
+%  ϖ = πφ² = 8.2248, information-geometric content per K₄ edge
+\newcommand{\specbond}{\varpi}
+
+
+% ============================================================================
+%  §4  FUNDAMENTAL CONSTANTS
+% ============================================================================
+
+% --- Golden ratio ---
+\newcommand{\gr}{\varphi}              % φ = (1+√5)/2
+
+% --- Planck scale ---
+\newcommand{\Mpl}{M_{\mathrm{Pl}}}    % Planck mass
+\newcommand{\lp}{\ell_{\mathrm{Pl}}}  % Planck length
+
+% --- Radion parameters ---
+\newcommand{\murad}{\mu_0}             % Radion mass parameter
+\newcommand{\nurad}{\nu_0}             % Radion frequency parameter
+
+
+% ============================================================================
+%  §5  COUPLING CONSTANTS & MIXING ANGLE
+% ============================================================================
+
+\newcommand{\aem}{\alpha_{\mathrm{em}}}           % Fine structure constant
+\newcommand{\as}{\alpha_s}                        % Strong coupling
+\newcommand{\tW}{\theta_W}                        % Weak mixing angle
+
+
+% ============================================================================
+%  §6  MASSES & ENERGIES
+% ============================================================================
+
+\newcommand{\mH}{m_H}                 % Higgs mass
+\newcommand{\mW}{m_{\mathrm{W}}}      % W boson mass
+\newcommand{\Esyn}{E_{\mathrm{syn}}}  % Syndrome energy (28.24 GeV)
+\newcommand{\Ebase}{E_{\mathrm{base}}}% Base energy scale
+
+
+% ============================================================================
+%  §7  PROBABILITIES & OPERATORS
+% ============================================================================
+
+\newcommand{\Psyn}{P_{\mathrm{syn}}}  % Syndrome probability
+\newcommand{\Punc}{P_{\mathrm{unc}}}  % Uncorrectable error probability
+\newcommand{\LL}{\mathcal{L}}         % Lagrangian density
+\newcommand{\Hilbert}{\mathcal{H}}    % Hilbert space
+\newcommand{\Identity}{\mathbb{I}}    % Identity operator
+\newcommand{\NN}{\mathcal{N}}         % Normalization
+
+
+% ============================================================================
+%  §8  COLORS — Canonical Gauge Sectors
+% ============================================================================
+%  These MUST be identical in every document.
+
+% Gauge group sectors (used in coupling diagrams, edge colorings)
+\definecolor{u1color}{RGB}{34,139,34}       % Forest green  — U(1)_Y
+\definecolor{su2color}{RGB}{70,130,180}     % Steel blue    — SU(2)_L
+\definecolor{su3color}{RGB}{200,50,50}      % Crimson red   — SU(3)_c
+
+% Code structure roles
+\definecolor{bulkcolor}{RGB}{70,130,180}    % Steel blue    — bulk / gauge bosons
+\definecolor{anchorcolor}{RGB}{220,20,60}   % Crimson       — anchor qubit
+\definecolor{codegreen}{RGB}{0,128,0}       % Green         — code / information
+\definecolor{edgecolor}{RGB}{100,100,100}   % Gray          — generic edges
+
+% Additional semantic colors (used in ≥2 documents)
+\definecolor{goldenphi}{RGB}{180,140,40}    % Gold          — golden ratio
+\definecolor{geogreen}{RGB}{40,140,80}      % Teal-green    — geometric sector
+\definecolor{topoviolet}{RGB}{120,50,180}   % Purple        — topological sector
+\definecolor{straincolor}{RGB}{40,160,80}   % Green         — strain highlighting
+\definecolor{loopgreen}{RGB}{34,139,34}     % Loop diagrams — safe (no correction)
+\definecolor{loopred}{RGB}{178,34,34}       % Loop diagrams — divergent
+
+
+% ============================================================================
+%  §9  DOCUMENT-SPECIFIC MACROS (uncomment / define locally as needed)
+% ============================================================================
+%  These are used in only one or two documents.  They are listed here for
+%  reference and to prevent name clashes, but should be defined locally
+%  in the document that needs them, NOT in this shared preamble.
+%
+%  --- S5: Syndrome Prediction ---
+%  \newcommand{\MX}{{M_X^{\mathrm{QSD}}}}       % QSD unification scale
+%  \newcommand{\Tc}{\mathcal{T}}                 % Transdimensional constant
+%
+%  --- S6: String Correspondence ---
+%  \newcommand{\gstring}{g_s}                    % String coupling (NOT \gs!)
+%  \newcommand{\ap}{\alpha'}                     % Regge slope
+%  \newcommand{\ls}{\ell_s}                      % String length
+%
+%  --- S7: Cosmological Constant ---
+%  \newcommand{\rhoL}{\rho_{\Lambda}}            % Dark energy density
+%  \newcommand{\rhoPl}{\rho_{\mathrm{Pl}}}       % Planck density
+%  \newcommand{\TdS}{T_{\mathrm{dS}}}            % de Sitter temperature
+%
+%  --- TN1: Hb Redefinition ---
+%  (Hbtwo is already in §3 since it's part of the Hb family)
+%
+%  --- S2/S5: Additional colors ---
+%  \definecolor{syndromecolor}{RGB}{220,120,30}  % Syndrome events
+%  \definecolor{dressingcolor}{RGB}{140,80,180}  % Dressing corrections
+%  \definecolor{proofbox}{RGB}{240,245,255}      % Proof box background
+%  \definecolor{protoncolor}{RGB}{100,50,180}    % Proton decay
+%  \definecolor{falsifycolor}{RGB}{180,30,30}    % Falsification criteria
+%
+%  --- S6: String-specific colors ---
+%  \definecolor{stringblue}{RGB}{30,80,160}      % String sector
+%  \definecolor{branegreen}{RGB}{40,120,60}      % Brane sector
+%  \definecolor{cyorange}{RGB}{200,120,30}       % Calabi-Yau
+%
+%  --- TN1: Comparison colors ---
+%  \definecolor{oldcolor}{RGB}{180,80,80}        % Old convention
+%  \definecolor{newcolor}{RGB}{50,120,180}       % New convention
+%  \definecolor{highlightcolor}{RGB}{255,250,230}% Highlight background
+
+
+\endinput
+% ============================================================================
+%  END OF QSD UNIFIED PREAMBLE
+% ============================================================================
