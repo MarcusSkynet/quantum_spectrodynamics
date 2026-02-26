@@ -36,7 +36,7 @@ where $\varphi=(1+\sqrt{5})/2$ is the golden ratio.
 | $m_W$ | W boson mass | 81.1 GeV | 80.377 GeV | PDG 2022 | 0.9% |
 | $\log(\rho_\Lambda/\rho_{Pl})$ | Cosmological constant | −121.28 | −121.27 | Planck 2018 | 0.008% |
 
-The **syndrome energy E_syn ≈ 28.2 GeV** is a novel QSD prediction corresponding to
+The **syndrome energy $E_{syn} \approx 28.2$ GeV** is a novel QSD prediction corresponding to
 the dimuon excess observed by CMS at $\sqrt{s} \approx 28.3$ GeV.
 
 ---
