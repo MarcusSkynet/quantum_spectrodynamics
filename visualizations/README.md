@@ -6,8 +6,8 @@ Self-contained Three.js web applications for exploring QSD geometry. Open any `.
 
 | File | Visualization | Description |
 |---|---|---|
-| `qsd_4simplex.html` | **4-Simplex: The Engine of Time** | Interactive exploration of the 4-simplex geometry underlying the [[5,1,3]] code. Rotate, zoom, and inspect vertex/edge relationships. |
-| `qsd_4simplex_network.html` | **Tensor Network: 4 Code Blocks** | Visualization of four interlocking [[5,1,3]] code blocks forming the QSD tensor network. Shows how information flows between code blocks. |
+| `qsd_4simplex.html` | **4-Simplex: The Engine of Time** | Interactive exploration of the 4-simplex geometry underlying the $[[5,1,3]]$ code. Rotate, zoom, and inspect vertex/edge relationships. |
+| `qsd_4simplex_network.html` | **Tensor Network: 4 Code Blocks** | Visualization of four interlocking $[[5,1,3]]$ code blocks forming the QSD tensor network. Shows how information flows between code blocks. |
 | `qsd_4simplex_snap_mechanism.html` | **Snap Mechanism: Anchor Decoupling** | Animated demonstration of the QSD "Snap" mechanism — how dimensional anchors decouple to produce syndrome energy transitions. |
 
 ## Usage

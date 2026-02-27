@@ -13,7 +13,7 @@ Quantum Spectrodynamics (QSD) is a theoretical framework that derives fundamenta
 physics constants — gauge couplings, particle masses, and the cosmological constant —
 from the algebraic geometry of the **$[[5,1,3]]$ quantum error-correcting code**.
 
-The framework requires **zero free parameters** beyond the Planck mass. All predictions
+The framework requires **zero free parameters** beyond the Planck mass (CODATA 2018). All predictions
 emerge from three constants (the *QSD triad*) that arise naturally from the code's
 topology:
 
@@ -62,7 +62,7 @@ quantum-spectrodynamics/
 │   ├── qsd_s4_renormalization.tex        S4: Topological renormalization
 │   ├── qsd_s5_syndrome_prediction.tex    S5: Syndrome prediction & proton stability
 │   ├── qsd_s6_string_correspondence.tex  S6: String theory correspondence
-│   ├── qsd_s7_cosmological_constant.tex  S7: Cosmological constant
+│   ├── qsd_s7_cosmological_constant.tex  S7: Cosmological constant (speculative extension)
 │   ├── qsd_tn1_hb_redefinition.tex       TN-1: Hb redefinition note
 │   ├── qsd_references.bib                Shared bibliography (175+ references)
 │   └── qsd_preamble.tex                  Unified notation definitions
@@ -154,15 +154,15 @@ Standard Model.
 
 ### The Derivation Chain
 
-1. **Code geometry → Triad constants** ($Hb_4,\,\varsigma,\,\varpi$) emerge from the
+1. **Code geometry → Triad constants** $(Hb_4,\,\varsigma,\,\varpi($ emerge from the
    $[[5,1,3]]$ code's topological invariants.
 2. **Triad → Gauge couplings** via 3-loop topological renormalization on the
    $K_4–C_5$ graph structure.
-3. **Triad → Energy scale** through the $2^{60} information compression factor
+3. **Triad → Energy scale** through the $2^{60}$ information compression factor
    from Planck to electroweak scale.
 4. **Triad → Mass spectrum** from syndrome extraction eigenvalues of the code.
 5. **Triad → Cosmological constant** via the entropy barrier
-   $4/\varsigma \approx 279.3$ nats.
+   $4/\varsigma \approx 279.3$ nats (speculative).
 
 Each step is derived algebraically with no fitted parameters. All derivations
 are documented across the main preprint and supplements S1–S7.
@@ -218,7 +218,7 @@ See [`environment.yml`](environment.yml) for the full conda specification.
 If you use this work, please cite:
 
 ```bibtex
-@article{hubka2026qsd,
+@misc{hubka2026qsd,
   author  = {Hubka, Marek},
   title   = {Quantum Spectrodynamics: Deriving Standard Model Parameters
              from the Geometry of Quantum Error-Correcting Codes},
@@ -249,4 +249,4 @@ Independent Researcher, Czech Republic
 
 ---
 
-*Quantum Spectrodynamics v1.0 — February 2026*
+*Quantum Spectrodynamics v1.0.0 — February 2026*

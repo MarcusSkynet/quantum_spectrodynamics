@@ -8,8 +8,8 @@ Python implementations for computing, validating, and visualizing all Quantum Sp
 
 | Module | Description | Run |
 |---|---|---|
-| `qsd_constants.py` | **Single source of truth.** Defines the QSD triad (Hb₄, ς, ϖ) and derives all physical predictions. Prints a full comparison table when run as a script. | `python qsd_constants.py` |
-| `qsd_simulation_suite.py` | Numerical simulations: eigenvalue analysis of [[5,1,3]] stabilizers, K₄ Heisenberg model ground states, energy scale cascades, and syndrome extraction. | `python qsd_simulation_suite.py` |
+| `qsd_constants.py` | **Single source of truth.** Defines the QSD triad  $(Hb_4,\,\varsigma,\,\varpi)$ and derives all physical predictions. Prints a full comparison table when run as a script. | `python qsd_constants.py` |
+| `qsd_simulation_suite.py` | Numerical simulations: eigenvalue analysis of $[[5,1,3]]$ stabilizers, $K_4$ Heisenberg model ground states, energy scale cascades, and syndrome extraction. | `python qsd_simulation_suite.py` |
 | `qsd_monte_carlo.py` | Monte Carlo validation of QSD error bounds across all predicted observables. Statistical analysis with confidence intervals. | `python qsd_monte_carlo.py` |
 
 ### Visualization (+ Matplotlib)
@@ -17,14 +17,14 @@ Python implementations for computing, validating, and visualizing all Quantum Sp
 | Module | Description | Output |
 |---|---|---|
 | `qsd_visualizations.py` | Publication-quality static figures: coupling derivation diagrams, energy scale hierarchies, prediction comparison plots. | `figures/*.png` |
-| `qsd_animations.py` | Animated GIFs: K₄+C₅ dynamics, [[5,1,3]] error correction cycles, renormalization flow, energy cascade. | `figures/*.gif` |
+| `qsd_animations.py` | Animated GIFs: $K_4+C_5$ dynamics, $[[5,1,3]]$ error correction cycles, renormalization flow, energy cascade. | `figures/*.gif` |
 | `qsd_syndrome_production.py` | Syndrome energy production cross-sections and dimuon excess analysis. | `figures/*.png` |
 
 ### Quantum Circuits (+ Qiskit)
 
 | Module | Description | Requires |
 |---|---|---|
-| `qsd_qiskit_suite.py` | Nine quantum circuit simulations: [[5,1,3]] code verification, K₄ Heisenberg VQE, C₅ eigenvalue circuits, stabilizer measurements, and more. | Qiskit ≥ 1.0, Qiskit-Aer ≥ 0.13 |
+| `qsd_qiskit_suite.py` | Nine quantum circuit simulations: $[5,1,3]]$ code verification, $K_4$ Heisenberg VQE, $C_5$ eigenvalue circuits, stabilizer measurements, and more. | Qiskit ≥ 1.0, Qiskit-Aer ≥ 0.13 |
 | `qsd_qiskit_additions.py` | Extended experiments: Trotter evolution, Mathieu equation circuits, advanced VQE variants. Imports from `qsd_qiskit_suite.py`. | Qiskit ≥ 1.0, Qiskit-Aer ≥ 0.13 |
 
 ## Dependency Graph
