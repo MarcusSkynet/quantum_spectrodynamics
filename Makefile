@@ -16,7 +16,7 @@ BIBTEX  = bibtex
 LATEXFLAGS = -interaction=nonstopmode -halt-on-error
 
 # Document stems (without .tex extension)
-MAIN = qsd_main_preprint
+MAIN = quantum_spectrodynamics
 SUPPLEMENTS = qsd_s1_formal_proofs \
               qsd_s2_energy_scale \
               qsd_s3_lagrangian \

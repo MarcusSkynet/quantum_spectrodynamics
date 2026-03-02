@@ -4,7 +4,7 @@ This directory contains pre-compiled PDF versions of all QSD documents for immed
 
 ## Reading Order
 
-1. **`qsd_main_preprint.pdf`** — Start here. The main paper presents the complete framework, from the $[[5,1,3]]$ code postulate through gauge coupling derivations to experimental predictions.
+1. **`quantum_spectrodynamics.pdf`** — Start here. The main paper presents the complete framework, from the $[[5,1,3]]$ code postulate through gauge coupling derivations to experimental predictions.
 
 2. **Supplements** (consult as needed for detailed derivations):
    - `qsd_s1_formal_proofs.pdf` — Mathematical proofs for all core theorems

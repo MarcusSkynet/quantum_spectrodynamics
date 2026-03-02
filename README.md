@@ -55,7 +55,7 @@ quantum-spectrodynamics/
 │
 ├── tex/                                  LaTeX source files
 │   ├── README.md
-│   ├── qsd_main_preprint.tex             Main paper
+│   ├── quantum_spectrodynamics.tex             Main paper
 │   ├── qsd_s1_formal_proofs.tex          S1: Formal proofs
 │   ├── qsd_s2_energy_scale.tex           S2: Energy scale and dressing
 │   ├── qsd_s3_lagrangian.tex             S3: QSD Lagrangian derivation

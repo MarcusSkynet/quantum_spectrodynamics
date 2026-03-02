@@ -6,7 +6,7 @@ This directory contains the LaTeX source files for the complete QSD manuscript s
 
 | File | Document | Description |
 |---|---|---|
-| `qsd_main_preprint.tex` | **Main Preprint** | Complete framework: postulates, derivations, predictions, and experimental comparisons |
+| `quantum_spectrodynamics.tex` | **Main Preprint** | Complete framework: postulates, derivations, predictions, and experimental comparisons |
 | `qsd_s1_formal_proofs.tex` | **Supplement S1** | Rigorous mathematical proofs for all core theorems |
 | `qsd_s2_energy_scale.tex` | **Supplement S2** | Derivation of the electroweak scale from the Planck mass via $2^{60}$ compression |
 | `qsd_s3_lagrangian.tex` | **Supplement S3** | Construction of the QSD Lagrangian from geometric potentials |
