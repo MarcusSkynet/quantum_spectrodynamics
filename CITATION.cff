@@ -1,4 +1,4 @@
-cff-version: 1.2.0
+cff-version: 1.0.0
 title: >-
   Quantum Spectrodynamics: Deriving Standard Model Parameters
   from the Geometry of Quantum Error-Correcting Codes
@@ -11,8 +11,8 @@ authors:
     family-names: Hubka
     affiliation: Independent Researcher
     country: CZ
-repository-code: https://github.com/[username]/quantum-spectrodynamics
-url: https://doi.org/10.5281/zenodo.XXXXXXX
+repository-code: https://github.com/MarcusSkynet/quantum_spectrodynamics
+url: https://doi.org/10.5281/zenodo.18832273
 keywords:
   - quantum error correction
   - standard model
@@ -24,8 +24,8 @@ keywords:
   - theoretical physics
 license: CC-BY-4.0
 version: 1.0.0
-date-released: "2026-02-26"
-doi: 10.5281/zenodo.XXXXXXX
+date-released: "2026-03-03"
+doi: 10.5281/zenodo.18832273
 abstract: >-
   Quantum Spectrodynamics (QSD) derives the gauge couplings,
   particle masses, and cosmological constant of the Standard Model

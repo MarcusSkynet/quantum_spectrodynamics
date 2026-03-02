@@ -3,7 +3,7 @@
 **Deriving Standard Model Parameters from the Geometry of Quantum Error-Correcting Codes**
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.XXXXXXX-blue)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18832273.svg)](https://doi.org/10.5281/zenodo.18832273)
 
 ---
 
@@ -223,7 +223,7 @@ If you use this work, please cite:
   title   = {Quantum Spectrodynamics: Deriving Standard Model Parameters
              from the Geometry of Quantum Error-Correcting Codes},
   year    = {2026},
-  doi     = {10.5281/zenodo.XXXXXXX},
+  doi     = {10.5281/zenodo.18832273},
   note    = {Independent research preprint with seven supplements}
 }
 ```
@@ -249,4 +249,4 @@ Independent Researcher, Czech Republic
 
 ---
 
-*Quantum Spectrodynamics v1.0.0 — February 2026*
+*Quantum Spectrodynamics v1.0.0 — March 2026*
