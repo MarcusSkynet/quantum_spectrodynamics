@@ -27,4 +27,4 @@ Version: 1.0.0
 """
 
 __version__ = "1.0.0"
-__author__ = "Marcus Hubka"
+__author__ = "Marek Hubka"

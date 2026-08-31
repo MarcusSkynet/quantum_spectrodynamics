@@ -1,0 +1,237 @@
+% ============================================================================
+%  QSD UNIFIED PREAMBLE — qsd_preamble.sty
+%  Version 2.0 — July 2026
+% ============================================================================
+%  Usage:
+%    \usepackage{qsd_preamble}          — base layer (papers/supplements;
+%                                         byte-compatible with v1.0 users)
+%    \usepackage[marks]{qsd_preamble}   — base + epistemic marks, result-box
+%                                         environments, code/logical macros
+%                                         (walkthrough series; new documents)
+%
+%  v2.0 CHANGELOG (2026-07-19, repository unification):
+%    - xcolor is now loaded with the [table] option via \PassOptionsToPackage
+%      (fixes the option clash for documents that load [table]{xcolor} after
+%      this package; \rowcolor available everywhere).
+%    - mdframed added to the base package set (result boxes).
+%    - hyperref double-load removed (was loaded twice in v1.0).
+%    - Walkthrough palette added unconditionally (Rbg/Rcolor, Cpbg/Cpcolor,
+%      Tbg/Tcolor, Ibg/Icolor, Sbg/Scolor, Ebg/Ecolor). \definecolor is
+%      redefinition-safe: documents that define these names keep working.
+%    - NEW [marks] option gates every new MACRO (\Rmark, \Cpmark, \Tmark,
+%      \EXPmark, \Omark, \Ccode, \XL, \YL, \ZL) and the result-box
+%      environments, so pre-v2.0 documents that define these names locally
+%      compile unchanged against v2.0 when loading without the option.
+%
+%  CONVENTION DECISIONS (unchanged from v1.0):
+%    - Subscript labels use \mathrm{} (not \text{}).
+%    - Geometric strain: \gs (short) = \strain (alias) = ς (varsigma)
+%    - Spectral bond: \specbond = ϖ (varpi);  golden ratio: \gr = φ
+%    - Planck mass: M_Pl (full "Pl")
+%    - Epistemic tags per Briefing §2: exactly one of [R]/[C+]/[T]/[EXP]/[O]
+%      per claim; legacy [C] is retired and deliberately has no macro here.
+% ============================================================================
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{manuscripts/preamble/qsd_preamble}[2026/07/19 QSD Unified Notation v2.0]
+
+% ---------------------------------------------------------------- options
+\newif\ifqsd@marks
+\qsd@marksfalse
+\DeclareOption{marks}{\qsd@markstrue}
+\DeclareOption*{\PackageWarning{qsd_preamble}{Unknown option '\CurrentOption'}}
+\ProcessOptions\relax
+
+% ============================================================================
+%  §1  REQUIRED PACKAGES
+% ============================================================================
+
+\PassOptionsToPackage{table}{xcolor}
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{amsmath,amssymb,amsthm,mathtools}
+\RequirePackage{geometry}
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage{xcolor}
+\RequirePackage{physics}
+\RequirePackage{graphicx}
+\RequirePackage{enumitem}
+\RequirePackage{float}
+\RequirePackage{tikz}
+\RequirePackage{mdframed}
+\RequirePackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\usetikzlibrary{
+  shapes,
+  arrows.meta,
+  positioning,
+  calc,
+  decorations.pathmorphing,
+  decorations.markings,
+  decorations.text,
+  decorations.pathreplacing,
+  patterns
+}
+
+% ============================================================================
+%  §2  THEOREM ENVIRONMENTS
+% ============================================================================
+%  Kept for the published papers/supplements. Per the July-2026 style rules,
+%  NEW documents (walkthroughs, wiki-derived papers) do NOT use numbered
+%  theorem environments — they use the result boxes of §10 instead.
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{axiom}{Axiom}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{question}[theorem]{Open Question}
+
+% ============================================================================
+%  §3  THE QSD TRIAD — Core Constants
+% ============================================================================
+
+\newcommand{\Hb}{\textnormal{H\kern-0.3em b}}
+\newcommand{\Hbn}{\Hb_n}              % Generic Hb_n
+\newcommand{\Hbfour}{\Hb_4}           % Hb_4 = 1/(4 ln 2)
+\newcommand{\Hbtwo}{\Hb_2}            % Hb_2 = 1/(2 ln 2)  [TN1]
+
+\newcommand{\gs}{\varsigma}            % Geometric strain ς = 3/(80φ²)
+\newcommand{\strain}{\varsigma}        % Alias
+\newcommand{\specbond}{\varpi}         % Spectral bond ϖ = πφ²
+
+% ============================================================================
+%  §4  FUNDAMENTAL CONSTANTS
+% ============================================================================
+
+\newcommand{\gr}{\varphi}              % Golden ratio φ = (1+√5)/2
+\newcommand{\Mpl}{M_{\mathrm{Pl}}}    % Planck mass
+\newcommand{\lp}{\ell_{\mathrm{Pl}}}  % Planck length
+\newcommand{\murad}{\mu_0}             % Radion mass parameter
+\newcommand{\nurad}{\nu_0}             % Radion frequency parameter
+
+% ============================================================================
+%  §5  COUPLING CONSTANTS & MIXING ANGLE
+% ============================================================================
+
+\newcommand{\aem}{\alpha_{\mathrm{em}}}
+\newcommand{\as}{\alpha_s}
+\newcommand{\tW}{\theta_W}
+
+% ============================================================================
+%  §6  MASSES & ENERGIES
+% ============================================================================
+
+\newcommand{\mH}{m_H}
+\newcommand{\mW}{m_{\mathrm{W}}}
+\newcommand{\Esyn}{E_{\mathrm{syn}}}  % Snap energy (28.2449 GeV; OVERRIDE-032 gloss)
+\newcommand{\Ebase}{E_{\mathrm{base}}}
+
+% ============================================================================
+%  §7  PROBABILITIES & OPERATORS
+% ============================================================================
+
+\newcommand{\Psyn}{P_{\mathrm{syn}}}
+\newcommand{\Punc}{P_{\mathrm{unc}}}
+\newcommand{\LL}{\mathcal{L}}
+\newcommand{\Hilbert}{\mathcal{H}}
+\newcommand{\Identity}{\mathbb{I}}
+\newcommand{\NN}{\mathcal{N}}
+
+% ============================================================================
+%  §8  COLORS — Canonical Gauge Sectors and Code Roles
+% ============================================================================
+%  These MUST be identical in every document. (\definecolor is
+%  redefinition-safe; later document-local definitions simply override.)
+
+\definecolor{u1color}{RGB}{34,139,34}       % Forest green  — U(1)_Y
+\definecolor{su2color}{RGB}{70,130,180}     % Steel blue    — SU(2)_L
+\definecolor{su3color}{RGB}{200,50,50}      % Crimson red   — SU(3)_c
+
+\definecolor{bulkcolor}{RGB}{70,130,180}    % Steel blue    — bulk / gauge bosons
+\definecolor{anchorcolor}{RGB}{220,20,60}   % Crimson       — anchor qubit
+\definecolor{codegreen}{RGB}{0,128,0}       % Green         — code / information
+\definecolor{edgecolor}{RGB}{100,100,100}   % Gray          — generic edges
+
+\definecolor{goldenphi}{RGB}{180,140,40}    % Gold          — golden ratio
+\definecolor{geogreen}{RGB}{40,140,80}      % Teal-green    — geometric sector
+\definecolor{topoviolet}{RGB}{120,50,180}   % Purple        — topological sector
+\definecolor{straincolor}{RGB}{40,160,80}   % Green         — strain highlighting
+\definecolor{loopgreen}{RGB}{34,139,34}     % Loop diagrams — safe
+\definecolor{loopred}{RGB}{178,34,34}       % Loop diagrams — divergent
+
+% ============================================================================
+%  §9  COLORS — Epistemic-Tag Palette (walkthrough series; v2.0)
+% ============================================================================
+%  Backgrounds (…bg) and frame colors (…color) for the result boxes of §10
+%  and the epistemic marks. Names match the walkthrough series 1–17.
+
+\definecolor{Rbg}{RGB}{235,255,240}         % [R]   pale green background
+\definecolor{Rcolor}{RGB}{40,140,60}        % [R]   frame
+\definecolor{Cpbg}{RGB}{230,240,255}        % [C+]  pale blue background
+\definecolor{Cpcolor}{RGB}{50,80,180}       % [C+]  frame
+\definecolor{Tbg}{RGB}{255,248,225}         % [T]   pale gold background
+\definecolor{Tcolor}{RGB}{160,120,20}       % [T]   frame
+\definecolor{Ibg}{RGB}{255,250,235}         % insight cream background
+\definecolor{Icolor}{RGB}{160,120,20}       % insight frame
+\definecolor{Sbg}{RGB}{248,240,255}         % synthesis violet background
+\definecolor{Scolor}{RGB}{100,40,160}       % synthesis frame
+\definecolor{Ebg}{RGB}{255,242,242}         % [EXP]/[O] pale red background
+\definecolor{Ecolor}{RGB}{180,40,40}        % [EXP]/[O] frame
+
+% ============================================================================
+%  §10  [marks] OPTION — Epistemic Marks, Result Boxes, Code Macros
+% ============================================================================
+%  Everything below is defined ONLY under \usepackage[marks]{qsd_preamble}.
+%  Pre-v2.0 documents that define these names locally load the package
+%  without the option and are unaffected.
+
+\ifqsd@marks
+
+% --- Epistemic marks (Briefing §2; exactly one per claim) ---
+\newcommand{\Rmark}{\textcolor{Rcolor}{\textbf{[R]}}}      % Rigorous
+\newcommand{\Cpmark}{\textcolor{Cpcolor}{\textbf{[C+]}}}   % Supported conjecture (names its premise)
+\newcommand{\Tmark}{\textcolor{Tcolor}{\textbf{[T]}}}      % Thermodynamic principle
+\newcommand{\EXPmark}{\textcolor{Ecolor}{\textbf{[EXP]}}}  % Exploratory
+\newcommand{\Omark}{\textcolor{Ecolor}{\textbf{[O]}}}      % Open question
+
+% --- Code and logical-operator notation ---
+\newcommand{\Ccode}[4]{[\![#1,#2,#3]\!]_{#4}}              % [[n,k,d]]_q
+\newcommand{\XL}{\bar X}                                   % Logical X
+\newcommand{\YL}{\bar Y}                                   % Logical Y
+\newcommand{\ZL}{\bar Z}                                   % Logical Z
+
+% --- Result-box environments (the walkthrough/mdframed style) ---
+\newenvironment{Rbox}{\begin{mdframed}[backgroundcolor=Rbg,linecolor=Rcolor,linewidth=1.2pt]}{\end{mdframed}}
+\newenvironment{Cpbox}{\begin{mdframed}[backgroundcolor=Cpbg,linecolor=Cpcolor,linewidth=1.2pt]}{\end{mdframed}}
+\newenvironment{Tbox}{\begin{mdframed}[backgroundcolor=Tbg,linecolor=Tcolor,linewidth=1.2pt]}{\end{mdframed}}
+\newenvironment{Ibox}{\begin{mdframed}[backgroundcolor=Ibg,linecolor=Icolor,linewidth=1.2pt]}{\end{mdframed}}
+\newenvironment{Sbox}{\begin{mdframed}[backgroundcolor=Sbg,linecolor=Scolor,linewidth=1.2pt]}{\end{mdframed}}
+\newenvironment{Ebox}{\begin{mdframed}[backgroundcolor=Ebg,linecolor=Ecolor,linewidth=1.2pt]}{\end{mdframed}}
+
+\fi
+
+% ============================================================================
+%  §11  DOCUMENT-SPECIFIC MACROS (define locally, NOT here)
+% ============================================================================
+%  Listed to prevent name clashes — see v1.0 §9 for the historical registry
+%  (S5 \MX/\Tc; S6 \gstring/\ap/\ls; S7 \rhoL/\rhoPl/\TdS; per-document
+%  extra colors). Walkthrough-local macros (e.g. \Jled, \fsnap) likewise
+%  stay in their documents.
+
+\endinput
+% ============================================================================
+%  END OF QSD UNIFIED PREAMBLE v2.0
+% ============================================================================

@@ -5,13 +5,25 @@
 # Activate: conda activate qsd
 # Update:   conda env update -f environment.yml --prune
 #
-# The environment has three tiers:
-#   - Core:    NumPy + SciPy (sufficient to verify all predictions)
-#   - Qiskit:  Local quantum circuit simulation
-#   - IBM HW:  Execute on real IBM Quantum hardware
+# Register the Jupyter kernel (once, after activation):
+#   python -m ipykernel install --user --name qsd --display-name "Python (qsd)"
 #
-# All tiers are included. Comment out qiskit-ibm-runtime if you
-# don't need hardware access.
+# The environment has four tiers:
+#   - Core:      NumPy + SciPy + SymPy + mpmath (verifies every prediction;
+#                the wiki validation suite runs 50-digit checks on this tier)
+#   - Suite:     matplotlib + networkx (figures, wiki graph, visualizations)
+#   - Qiskit:    local quantum circuit simulation (VQE, syndrome extraction,
+#                walkthrough companions W14/W15/W19, Deutsch-CTC toy)
+#   - IBM HW:    execute on real IBM Quantum hardware (optional)
+#
+# Verified 2026-08-04 against the full repository script set:
+#   qsd_constants, qsd_simulation_suite, qsd_monte_carlo,
+#   qsd_syndrome_production, qsd_qiskit_suite, qsd_qiskit_additions,
+#   qsd_visualizations, qsd_animations, w14/w15/w19 companions,
+#   wiki validation suite run_all.py (875/875), exploratory scripts —
+#   all green on: python 3.11.15, numpy 2.4.4, scipy 1.17.1,
+#   sympy 1.14.0, mpmath 1.3.0, matplotlib 3.10.9, networkx 3.6.1,
+#   qiskit 2.5.1, qiskit-aer 0.17.2.
 
 name: qsd
 channels:
@@ -23,29 +35,34 @@ dependencies:
   - python=3.11
 
   # ── Core (required for all predictions) ─────────────────
-  - numpy>=1.24
+  - numpy>=1.26
   - scipy>=1.11
-  - matplotlib>=3.7
   - sympy>=1.12
+  - mpmath>=1.3          # 50-digit suite checks (explicit, not implied)
 
-  # ── Notebook support ────────────────────────────────────
+  # ── Suite: figures & wiki graph ─────────────────────────
+  - matplotlib>=3.8
+  - networkx>=3.0        # build_graph.py, origins DAG audit
+
+  # ── Notebook support + the qsd kernel ───────────────────
   - jupyterlab>=4.0
   - ipywidgets>=8.0
+  - ipykernel>=6.29      # then register: see header
 
   # ── LaTeX compilation (optional) ────────────────────────
-  # Uncomment if you want to build the paper from source:
+  # Uncomment if you want to build the papers from source:
   # - texlive-core
 
   # ── pip dependencies ────────────────────────────────────
   - pip
   - pip:
-      # Qiskit ecosystem (local simulation)
-      - qiskit>=1.0
-      - qiskit-aer>=0.13
+      # Qiskit ecosystem (local simulation) — tested at 2.5.1 / 0.17.2
+      - qiskit>=2.0,<3
+      - qiskit-aer>=0.15
 
-      # IBM Quantum hardware execution
-      # Comment out if hardware access is not needed
-      - qiskit-ibm-runtime>=0.20
+      # IBM Quantum hardware execution (optional tier;
+      # comment out if hardware access is not needed)
+      - qiskit-ibm-runtime>=0.29
 
       # Visualization extras
       - pylatexenc>=2.10        # Qiskit circuit LaTeX rendering

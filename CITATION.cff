@@ -1,7 +1,5 @@
 cff-version: 1.0.0
-title: >-
-  Quantum Spectrodynamics: Deriving Standard Model Parameters
-  from the Geometry of Quantum Error-Correcting Codes
+title: Quantum Spectrodynamics
 message: >-
   If you use this software or reference this work, please cite
   it using the metadata from this file.
@@ -21,19 +19,24 @@ keywords:
   - cosmological constant
   - quantum information
   - holographic principle
+  - emergent spacetime
   - theoretical physics
 license: CC-BY-4.0
-version: 1.0.0
-date-released: "2026-03-03"
+version: 2.0.0
+date-released: "2026-07-22"
 doi: 10.5281/zenodo.18832273
 abstract: >-
-  Quantum Spectrodynamics (QSD) derives the gauge couplings,
-  particle masses, and cosmological constant of the Standard Model
-  from the algebraic geometry of the [[5,1,3]] quantum error-correcting
-  code, requiring zero free parameters beyond the Planck mass. The
-  framework introduces three fundamental constants — the holographic
-  bit density Hb_4 = 1/(4 ln 2), geometric strain sigma = 3/(80 phi^2),
-  and spectral bond varpi = pi*phi^2 — from which all Standard Model
-  parameters are derived through topological renormalization on the
-  K4-C5 graph structure. Predictions agree with experiment to within
-  0.002%-1.2% across six independent observables.
+  Quantum Spectrodynamics (QSD) is a framework for deriving physical
+  dynamics from quantum error correction. From a single structural axiom --
+  the universe implements a quantum error-correcting code [[n,k,d]]_q with
+  all parameters initially unknown -- the perfect five-qubit code [[5,1,3]]
+  is selected (seven-step exclusion chain plus Landauer's principle), and
+  its geometry fixes three constants: the holographic bit density
+  Hb_4 = 1/(4 ln 2) (from K4), the spectral bond varpi = pi*phi^2 (from
+  C5), and the geometric strain sigma = 3/(80 phi^2) (from their union).
+  With zero free parameters beyond the Planck mass these yield the gauge
+  couplings, particle masses, and cosmological constant to 0.004%-1.2%
+  across six observables, plus the falsifiable 28.24 GeV snap-energy
+  prediction. This modular record grows by parts: v1.0 is the Standard
+  Model sector (main preprint + supplements S1-S7 + TN-1); v2.0 adds
+  Phase 2 Paper 1 (the QECC Selection Theorem) with supplements S8-S9.

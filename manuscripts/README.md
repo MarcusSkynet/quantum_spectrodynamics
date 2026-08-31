@@ -1,61 +1,68 @@
 # LaTeX Sources
 
-This directory contains the LaTeX source files for the complete QSD manuscript suite.
+This directory holds the two **entry manuscripts** plus the shared LaTeX
+infrastructure; the supplement series lives in
+[`supplements/`](supplements/) and reviewed derivation walkthroughs appear
+incrementally in [`derivations/`](derivations/).
 
-## Documents
+## Entry manuscripts
 
-| File | Document | Description |
-|---|---|---|
-| `quantum_spectrodynamics.tex` | **Main Preprint** | Complete framework: postulates, derivations, predictions, and experimental comparisons |
-| `qsd_s1_formal_proofs.tex` | **Supplement S1** | Rigorous mathematical proofs for all core theorems |
-| `qsd_s2_energy_scale.tex` | **Supplement S2** | Derivation of the electroweak scale from the Planck mass via $2^{60}$ compression |
-| `qsd_s3_lagrangian.tex` | **Supplement S3** | Construction of the QSD Lagrangian from geometric potentials |
-| `qsd_s4_renormalization.tex` | **Supplement S4** | 3-loop topological renormalization on the $K_4–C_5$ graph |
-| `qsd_s5_syndrome_prediction.tex` | **Supplement S5** | Syndrome energy prediction (28.2 GeV) and proton lifetime bounds |
-| `qsd_s6_string_correspondence.tex` | **Supplement S6** | Correspondence between QSD and string-theoretic constructions |
-| `qsd_s7_cosmological_constant.tex` | **Supplement S7** | Cosmological constant from computational thermodynamics *(speculative extension)* |
-| `qsd_tn1_hb_redefinition.tex` | **Technical Note TN-1** | Redefinition and clarification of the holographic bit density $Hb$ |
+| File | Document | Release | Description |
+|---|---|---|---|
+| `quantum_spectrodynamics.tex` | **Main Preprint** | v1.0 | Complete framework: postulates, derivations, predictions, and experimental comparisons (Standard Model sector) |
+| `qsd2_p1_code_selection.tex` | **Phase 2 — Paper 1** | v2.0 | The QECC Selection Theorem: why $[[5,1,3]]$ and nothing else — the seven-step exclusion chain from L0 plus Landauer's principle |
 
-## Shared Resources
+## Shared infrastructure (repository-level)
 
-| File | Purpose |
+| Location | Purpose |
 |---|---|
-| `qsd_references.bib` | Unified BibTeX bibliography shared by all documents |
-| `qsd_preamble.tex` | Unified notation definitions (reference copy — each document currently has self-contained preambles) |
+| `references/qsd_references.bib` | **Unified bibliography** — one BibTeX file for every document in the corpus (v1 + v2) |
+| `preamble/qsd_preamble.sty` | **Unified preamble** — notation, palette, epistemic marks; loaded by the Phase 2 documents |
+| `preamble/qsd_preamble.tex` | Legacy v1 preamble (reference copy — the v1 documents carry self-contained preambles) |
+| `errata/qsd_v1_errata.tex` | v1.0 errata & Phase-2 concordance (ships with v2.0) |
+
+Every document references these by **explicit relative path**
+(e.g. `\bibliography{references/qsd_references}`), so no environment
+variables are needed.
 
 ## Compilation
 
-Each document compiles independently. From this directory:
+Each document compiles independently. From the repository root:
 
 ```bash
-# Standard LaTeX build cycle
-pdflatex qsd_main_preprint.tex
-bibtex qsd_main_preprint
-pdflatex qsd_main_preprint.tex
-pdflatex qsd_main_preprint.tex
+make main p1      # the two entry manuscripts
+make all          # everything, into ../pdf/
+```
 
-# Or use the repository Makefile from the root:
-cd .. && make all
+Or by hand from this directory:
+
+```bash
+pdflatex quantum_spectrodynamics.tex
+bibtex quantum_spectrodynamics
+pdflatex quantum_spectrodynamics.tex
+pdflatex quantum_spectrodynamics.tex
 ```
 
 ### Requirements
 
 - TeX Live 2023+ (or MiKTeX / MacTeX equivalent)
-- Required packages: `amsmath`, `amssymb`, `amsthm`, `physics`, `tikz`, `hyperref`, `booktabs`, `xcolor`, `geometry`, `graphicx`, `mathtools`
-- The `physics` package provides `\bra`, `\ket`, `\braket` notation
-- TikZ libraries: `shapes`, `arrows.meta`, `positioning`, `calc`, `decorations.pathmorphing`, `decorations.markings`
+- Packages: `amsmath`, `amssymb`, `amsthm`, `physics`, `tikz`, `hyperref`,
+  `booktabs`, `xcolor`, `geometry`, `graphicx`, `mathtools`, `mdframed`
+- TikZ libraries: `shapes`, `arrows.meta`, `positioning`, `calc`,
+  `decorations.pathmorphing`, `decorations.markings`
 
-## Notation Conventions
-
-The QSD manuscript suite uses a unified notation system:
+## Notation conventions
 
 | Symbol | LaTeX command | Meaning |
 |---|---|---|
 | $Hb$ | `\Hb` | Holographic bit density |
-| $Hb_4$ | `\Hbfour` | $Hb$ in 4 dimensions $= 1/(4 \ln 2)$ |
-| $\varsigma$ | `\strain` | Geometric strain $= 3/(80 \varphi^2)$ |
-| $\varpi$ | `\specbond` | Spectral bond $= \pi \varphi^2$ |
-| $E_{syn}$ | `\Esyn` | Syndrome energy |
+| $Hb_4$ | `\Hbfour` | $Hb$ in 4 dimensions $= 1/(4 \ln 2)$ — K₄-owned |
+| $\varsigma$ | `\gs` (alias `\strain`) | Geometric strain $= 3/(80 \varphi^2)$ — K₄∪C₅ |
+| $\varpi$ | `\specbond` | Spectral bond $= \pi \varphi^2$ — C₅-owned |
+| $E_{syn}$ | `\Esyn` | Snap (syndrome) energy |
 | $M_{Pl}$ | `\Mpl` | Planck mass |
-| $\mu_0$ | `\murad` | Radiative scale (dimensionful VEV) |
+| $\mu_0$ | `\murad` | Radion VEV (dimensionful) |
 | $\mathscr{L}$ | `\LL` | QSD Lagrangian density |
+
+Phase 2 documents additionally carry the epistemic tags
+$[R]$ / $[C+]$ / $[T]$ / $[EXP]$ / $[O]$ on every major claim.

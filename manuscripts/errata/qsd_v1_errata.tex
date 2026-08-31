@@ -1,0 +1,488 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[marks]{manuscripts/preamble/qsd_preamble}
+\geometry{margin=1in}
+
+% ---- errata severity markers (document-specific) ----
+\newcommand{\SUP}{\textcolor{Ecolor}{\textbf{[SUPERSEDED]}}}     % never restate
+\newcommand{\REF}{\textcolor{Icolor}{\textbf{[REFORMULATED]}}}   % right physics, retired language
+\newcommand{\DRIFT}{\textcolor{Scolor}{\textbf{[DRIFT]}}}        % internal inconsistency, ruling pending
+\newcommand{\OK}{\textcolor{Rcolor}{\textbf{[CONFIRMED]}}}       % survives verbatim
+\newcommand{\UP}{\textcolor{Cpcolor}{\textbf{[UPGRADED]}}}       % promoted by v2.x
+
+\title{\textbf{Quantum Spectrodynamics v1.0}\\ Errata and Phase-2 Concordance\\[0.6em]
+\large Corrections, reformulations, and status changes for the v1.0
+published set\\ (main preprint + supplements S1--S7), issued with the v2.0 release}
+
+\author{Marek Hubka\\
+\small Independent Researcher, Czech Republic}
+
+\date{\today --- release v2.0 companion document}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+The v1.0 set \cite{Hubka2026QSD, Hubka2026QSDSupp} is frozen as published. The v2.x research programme (papers P1--P5 with supplements S8--S16) kept its spine and corrected several of its formulations. This document is the formal errata: every correction, reformulation, and internal inconsistency found in the v1.0 set, each mapped to its canonical v2.x treatment and tagged under the epistemic system introduced in v2.x (\Rmark\ rigorous within QSD, \Cpmark\ supported conjecture with named premise, \Tmark\ thermodynamic principle, \EXPmark\ exploratory/speculative, \Omark\ open). The severity classes are \SUP\ (never restate), \REF\ (right physics, retired language), \DRIFT\ (internal inconsistency, ruling pending), \OK\ (survives verbatim), and \UP\ (strengthened by v2.x). Nothing in this document modifies the published texts; it is the reading layer through which they should be cited.
+\end{abstract}
+
+%==============================================================================
+\section{Scope and How to Read}
+%==============================================================================
+
+This errata covers the published v1.0 release: the main preprint \cite{Hubka2026QSD} and supplements S1--S7 \cite{Hubka2026QSDSupp}. Technical notes are excluded from the public set going forward (one legacy defect of TN-1 is recorded in \S\ref{sec:tn1} for completeness, since earlier bundles included it).
+
+\textbf{Precedence.} Where this document and a v1.0 text disagree, this document wins; where this document and the v2.x canon stack (P1--P5/S8--S16) disagree, the canon stack wins.
+
+\textbf{Citation rule.} A superseded v1.0 claim should be cited from its v2.x replacement (the concordance table of \S\ref{sec:concordance} gives the canonical home of every affected topic), with v1.0 cited for priority and history. Claims marked \OK\ may be cited from v1.0 directly.
+
+\textbf{Epistemic retrofit.} v1.0 used a three-category taxonomy (``Derived / Constructed / Open''). All claims are retroactively re-tagged under the five-tag system; the assignments below are part of this errata.
+
+\newpage
+
+%==============================================================================
+\section{Set-Wide Errata}
+%==============================================================================
+
+The rulings that apply across the whole set, most severe first.
+
+\begin{mdframed}[backgroundcolor=Ebg,linecolor=Ecolor,linewidth=1.2pt]
+\textbf{E1 \SUP\ --- The snap misidentified as ``$K_5 \to K_4 + $ bit.''} The set's worst recurring defect (preprint \S7.1 and App.~B; S3 \S5.2; S5 \S3). As published, the $\gamma_0$-split $K_5 \to K_4$ was cast as the phase transition, with $K_4$ (or ``$K_4 + W$'') read as a post-snap phase. \textbf{Canon \Rmark:} $K_4\cup C_5$ and $K_5$ are two views of the \emph{same} active phase; the only structural transition is the snap $=$ anchor decoupling, $[\![5,1,3]\!] \to [\![4,2,2]\!]$, $K_4 \to 2K_2$ --- always as a facing \emph{pair}, $2K_5 \to 5K_2$ (P4). ``Post-snap'' refers to the ledger phase only. Never restate the published wording.
+\end{mdframed}
+
+\begin{mdframed}[backgroundcolor=Ibg,linecolor=Icolor,linewidth=1.2pt]
+\textbf{E2 \REF\ --- The axiom carried the answer.} Published form: ``the vacuum is protected by the $[\![5,1,3]\!]$ code'' (preprint \S1), with $k{=}1$, $d{=}3$ \emph{assumed} in the Hamming argument (\S2). \textbf{Canon:} the axiom L0 posits only that the universe is a QECC $[\![n,k,d]\!]_q$ with all four parameters unknown; $[\![5,1,3]\!]_2$ is \emph{derived} by the seven-step selection chain \Rmark\ --- with $k{=}1$ from Deutsch-CTC consistency, $d\ge3$ from error completeness, and the thermodynamic selection by Landauer's principle carrying its own tag \Tmark\ (never ``L0 alone''). P1 (v2.0) is the canonical statement.
+\end{mdframed}
+
+\begin{mdframed}[backgroundcolor=Ibg,linecolor=Icolor,linewidth=1.2pt]
+\textbf{E3 \REF\ --- $E_{\mathrm{syn}}$ re-glossed; the LHC events are driven snaps.} The set derives $\Esyn = \murad(1+8\gs) = 28.2449$~GeV and its experimental profile --- all of which stands \OK. Two glosses are superseded by the 2026 ruling on the event mechanism: (i)~\emph{``syndrome energy'' $\to$ \textbf{the snap energy}} --- the per-node break price; the syndrome is the \emph{record} the snap writes, not the thing that radiates. (ii)~The visible 28~GeV feature is a \textbf{driven pair snap} --- the lattice's error handling by \emph{excision} of an uncorrectable (weight-2) hit --- not the emission of a routine error-correction cycle; routine (weight-1) correction is \emph{silent} \Rmark\ (nothing severs, nothing prices at $\Esyn$; under the transfer mechanism, correction is information about the state, not an operation on it). The arithmetic of every published number is unchanged.
+\end{mdframed}
+
+\noindent The remaining set-wide rows:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.5cm}p{4.6cm}p{8.6cm}@{}}
+\toprule
+\# & As published & Correction / canon now \\
+\midrule
+E4 & \REF\ DCT dictionary (preprint App.~B): ``ledger $=$ the anchor qubit''; collapse $=$ ``$K_5{\to}K_4{+}$bit'' & ledger $=$ the frozen $5K_2$ record of the dead \emph{pair} (per node: $2K_2$ $+$ shared anchor pair); collapse rows re-mapped to the true snap. v2.x closure: the ledger is a classical \emph{death certificate} written by the freeze (no-quantum-ledger theorem \Rmark; ledger $=$ frozen record \Rmark\ given the Firing Postulate \Cpmark) --- P4, S13/S14 \\
+E5 & \REF\ $\alpha^{-1}$ deviation quoted unsigned (``22 ppm''; S1 \S9, S4 abstract and figures) & always signed: $\boldsymbol{-21.7}$ \textbf{ppm} --- QSD sits \emph{below} CODATA. The only citable value is the node-native bare $\alpha^{-1} = 137.033027$ \Rmark-chain (see E9) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+\# & as published & correction \\
+\midrule
+E6 & \REF\ $\tau_p \sim 1/\gs^4 \sim 10^{38\text{--}40}$~yr (preprint \S8.3  heuristic) & superseded by S5's own theorem: $\tau_p = M_X^4/(\alpha_s^2 m_p^5) = 1.9\times10^{39}$~yr with $M_X = \gs\Mpl$ \Rmark\ (arithmetic); the heuristic brackets it and should not be quoted \\
+E7 & \REF\ the $8\gs$ dressing read as ``4 severed bonds $\times$ $2\gs$ each'' (S5 abstract; preprint \S5) & $8$ is the literal count of severed \emph{intra-node} edges: $10 - 2$ surviving per node in the $2K_5 \to 5K_2$ event \Rmark\ (P4 \S3). Same number, different --- and now exact --- bookkeeping \\
+E8 & \REF\ $\pi$ in $\specbond = \pi\gr^2$ ``from the U(1) phase-space factor'' (preprint \S4.3) & heuristic retired; candidate mechanism: spinor holonomy of the pentagram clock \Cpmark\\
+E9 & \REF\ presentation of $\alpha^{-1}$ accuracy & the published $-21.7$~ppm bare value is the \emph{permanent} result; a later ``lattice-dressed 0.07~ppm'' refinement attempted in v2.x exploration \textbf{failed review and must never be cited}. S4's 3-loop angular screening is unaffected (it is part of the $-21.7$~ppm value and predates the dead result) \\
+E10 & \REF\ epistemic taxonomy ``Derived / Constructed / Open'' (set-wide) & five-tag system \Rmark/\Cpmark/\Tmark/\EXPmark/\Omark, exactly one per claim; the legacy tag [C] is retired \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{New physics attaching to v1.0 predictions (no text change).} The dead pair left by each visible snap has mass $M_{\mathrm{pair}} = 2\Esyn = 56.4899$~GeV --- everything liberated stays locked in the causally excised remnant and gravitates --- giving two post-publication discriminators for the S5 signal: every 28~GeV event recoils against $56.49$~GeV of \textbf{missing energy} (primary test), and the remnant population is a dark-matter candidate with the sharp cross-prediction $M_{\mathrm{DM}} = 2E_{\mathrm{CMS}}$ \Cpmark. The corpse retains no quantum hair (forgetting theorem \Rmark) --- exactly inert.
+
+%==============================================================================
+\section{Main Preprint (\texttt{quantum\_spectrodynamics})}
+%==============================================================================
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+M-1 & \SUP\ \S7.1 ``The snap: $K_5 \to K_4 + $ emitted bit''; the same identification in App.~B row ``Dimensional collapse $(4\to2)$ $\leftrightarrow$ Snap $(K_5 \to K_4 + \text{bit})$'' & E1: the snap is $K_4 \to 2K_2$ (pair event $2K_5 \to 5K_2$); the App.~B row maps dimensional collapse to \emph{this} transition \Rmark \\
+M-2 & \REF\ \S1--\S2 axiom formulation and Hamming premises & E2: L0 $+$ seven-step selection chain; $k, d, q$ derived \Rmark\ $+$ Landauer \Tmark \\
+M-3 & \REF\ \S5 $8\gs$ bond bookkeeping & E7 \\
+M-4 & \REF\ \S6 $\pi$-in-$\specbond$ gloss & E8 \Cpmark \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+M-5 & \REF\ \S9 $\tau_p$ heuristic & E6; S5's theorem is senior \\
+M-6 & \DRIFT\ \S8.2 branching ratios $94\%/5.7\%/0.02\%$ ($b\bar b/\tau\tau/\mu\mu$) vs S5's $83.6\%/5.6\%/0.020\%$ & Both sets are \emph{syndrome} (radion $\to f\bar f$) branching ratios of the same observable; no proton-decay BR table exists anywhere in the published set. The preprint prints the na\"ive three-channel table ($b,\tau,\mu$ only, no phase space; recomputed $94.30/5.68/0.0201$); S5's six-channel table adds $c\bar c$, $s\bar s$, $gg \approx 2\%$ and the phase-space factor $(1-4m_f^2/\Esyn^2)^{3/2}$ (recomputed $83.55/8.74/5.64/0.050/0.0204$ --- every printed column reproduces; ``83.6'' is a last-digit rounding of 83.55). The reduction decomposes $94.30 \to 86.71$ (channel addition) $\to 85.25$ (phase space) $\to 83.55$ ($gg$ fold) --- mostly \emph{channels}, not the PS factor alone as S5's caption suggests (imprecise attribution; arithmetic unaffected). Supersession, not contradiction: S5 senior \Rmark. Canonical set (PDG-2024 masses, $\Esyn = 28.2449$): $83.5/8.8/5.6/0.05/0.020/gg\,2$; $\tau\tau/\mu\mu = 276$ \\
+M-7 & \OK\ \S8.2 radion trace coupling $\mathcal{L}_{\mathrm{int}} = -(\phi_r/v_r)\sum_f m_f\bar\psi_f\psi_f$ & \UP\ promoted: this vertex is now the canonical \emph{production} vertex of the driven snap --- by crossing, it tags the driving fermion pair at the per-node price $m_{f\bar f} \approx \Esyn$, and the mass-proportional BRs survive verbatim as driver-coupling weights \Cpmark\ (premise: node-local radion trace coupling) \\
+M-8 & \SUP\ \S3.5 dual-route strain (``$K_4$ and $C_5$ independently produce the same strain'') & The $K_4$ route $3/8 - \Hbfour$ is \textbf{demoted from cross-check to numerical coincidence}. Its premise is the $SU(5)$ value $\sin^2\theta_W = 3/8$ --- foreign to QSD (this preprint itself: ``without postulating grand unification''; canon derives $\sin^2\theta_W = 3/13 + \gs/32 = 0.2312$). Exactly, $\gs_{K_4}/\gs = 10\gr^2 - \nurad$, so the 175.5-ppm ``agreement'' is the golden-form coincidence $\nurad \approx 9 + 10\gr$ (7.0 ppm; look-elsewhere $p \approx 1\%$, suite MC). $\gs$ has a single canonical definition, $\gs = \beta_1(K_4)/(C_{\mathrm{L}}\gr^2) = 3/(80\gr^2)$ --- owned by the \emph{union} per the map: $K_4 \to \Hbfour$, $C_5 \to \specbond$, $K_4 \cup C_5 \to \gs$ \Rmark\ (``$C_5$ route'' survives only as the formula's historical label, after its $\gr^2$ factor; see TN-1 section) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+M-9 & \REF\ App.~B dictionary row ``Unified Horizon Principle $\leftrightarrow$ Gauge coupling unification'' & A row-level category error: the pairing conflates two unrelated concepts, and each side fails separately. \emph{QSD side:} no gauge-coupling unification occurs in QSD --- the couplings are code-fixed and the terminating series has no running to a meeting point; ``unification'' language is retired programme-wide for gauge couplings (an $SU(5)$-adjacent reading survives only as the open $K_5$-holographic question \EXPmark, foreign to the observed $K_4\cup C_5$ sector). \emph{DCT side:} the UHP is not a gauge statement at all --- it is the constants-level principle of fundamental constants quartet $\{c, \hbar, k_B, \Hbfour\}$; $G$ emergent via $\Pi_D = \Upsilon_n = 1$, so the row mislabels its own referent. The UHP itself is \textbf{not} retired: it stands as a separate, unconfirmed DCT-track principle \Omark\ whose research is currently out of scope for the QSD programme. The row's surviving content is the shared $\Hbfour$ bridge --- which App.~B already states correctly one row below (``$\Hbfour$ in entropy formula $\leftrightarrow$ $\Hbfour$ in Heisenberg coupling''; in current canon: horizon bit density and QES placement $r_{\mathrm{L}} =  \sqrt{\Hbfour}\,R_{\mathrm{S}}$ on the DCT side, the coupling chain on the QSD side). Erratum: strike the UHP row; the $\Hbfour$ row carries the correspondence \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Unaffected spine \OK:} the L0 $\to$ couplings arc; $C_5$ Laplacian eigenvalues $(5\pm\sqrt5)/2$; the 15 syndrome channels ($n(n{-}k{-}1) = 3n$ at $n{=}5$); $\Esyn = 28.24$~GeV and the falsification table (tension $\le$ 3--4$\sigma$ tolerable, dead at 5$\sigma$; $\tau\tau/\mu\mu \sim 300$; $b$-jet rich; broad); $m_H = 5\murad = 126.706$~GeV headline; the coupling set $\alpha^{-1}$, $\alpha_s = 3\pi/80$, $\sin^2\theta_W$.
+
+%==============================================================================
+\section{S1 --- Formal Proofs}
+%==============================================================================
+
+The best-surviving document: its theorems are pure QECC mathematics and remain \Rmark\ verbatim (Hamming equality $2^k(1+3n) = 2^n$ at $n{=}5$, $k{=}1$; perfectness --- the 16 cosets tile $2^5$ exactly; distance 3; the cyclic stabiliser set).
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+S1-1 & \REF\ ``given $k = 1$ and $d = 3$, $[\![5,1,3]\!]$ is the unique smallest code'' --- premises taken as given & \UP\ the premises are now theorems: $k{=}1$ \Rmark\ (Deutsch-CTC crossing argument), $d\ge3$ \Rmark\ (error completeness), $q{=}2$ (Hamming $+$ Landauer \Tmark). S1's uniqueness proof becomes the \emph{final step} of the selection chain --- its scope grew, its content is untouched \\
+S1-2 & \REF\ \S9 ``22 ppm'' summary rows & E5: signed $-21.7$~ppm \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{S2 --- Energy Scale}
+%==============================================================================
+
+The $\murad$ ladder ($\Mpl \to 2^{-60} \to \gr^2 \to (1-6\gs)$, $\murad = 25.3411$~GeV), $m_H = 5\murad$, and $m_W = \tfrac{16}{5}\murad = 81.09$~GeV remain canonical \OK.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+S2-1 & \DRIFT\ prints $\xi = 1.00651$ (abstract; boxed eq.) & \textbf{presentation-level numeric slip.} Canonical computed value $\xi = \murad/\nurad = 1.0063918$; the true gap is \textbf{117.4~ppm} (the earlier ``$\approx$119~ppm'' print was itself a rounded-gap artifact, computed against 1.00639). The 1.00651 is consistent with an earlier-precision ratio (several rounded-input reconstructions reproduce it; exact provenance unrecoverable). No propagation is possible: $\xi$ is the dependent sink of the ruled $\nu_0$/$\xi$ direction --- it defines nothing downstream (machine-asserted) \Rmark \\
+S2-2 & \DRIFT\ flow figure carries a ``dressed'' $m_W = 81.09/\xi = 80.57$~GeV & \textbf{ retired outright; not citable.} Grounds: (i)~\emph{mechanism-free, wrong direction} --- the ruled $\nu_0$/$\xi$ arrow makes $\xi$ a dependent bookkeeping ratio that defines nothing; dividing a mass by it attaches no physics; (ii)~\emph{it does not even fit} --- the divisor required to land on the measured mass is 1.00889; $\xi$ falls \textbf{2482~ppm short}, so the ``dressed'' 80.57 still sits $0.24\%$ ($\sim$16$\sigma$) high; (iii)~\emph{the proximity field is baited} --- a golden-form divisors $1+(a+b\gr)\gs$, $|a|,|b| \le 12$, finds exactly one within 50~ppm of the measured mass (a $p \approx 5\%$ look-elsewhere accident, documented as a control, never a candidate), on an experimental target that itself spans $\sim$0.08\% (CDF-II tension). The 0.07-ppm lesson (E9) applies in full. Canonical $m_W = (16/5)\murad = 81.0916$~GeV stands, honestly $+0.89\%$. The legitimate residue is registered separately as lattice dressing of ladder masses --- mechanism required, decoupled from $\xi$ \\
+S2-3 & \DRIFT\ presents $\nu_0 = \Hbfour/\gs = 25.1802$ as the ``dimensionless'' radion VEV, forming a second route to the scale with $\xi$ recording a $0.639\%$ two-route agreement & \textbf{billing retired (OVERRIDE-037, 2026-08-22); $\xi$ retired entirely.} An energy can be compared with a pure number only through a unit, and the agreement exists \emph{only} at $u = \mathrm{GeV}$ --- a unit the framework nowhere derives (in the framework's own base unit $E_{\mathrm{base}} = \Mpl/2^{60}$ the routes differ by a factor 10.5; in Planck units by eighteen orders; machine-verified). The residual measured the GeV convention, not physics. The dimensionless radion VEV is $\murad/\Mpl = 2^{-60}\gr^2(1-6\gs) = (40\gr+31)/(40\cdot2^{60}) = 2.0756\times10^{-18}$ --- one VEV, read dimensionlessly and, via $\Mpl$ (which gives the energy scale a specific unit, nothing else), dimensionfully. With that identification $\xi \equiv 1$ and ceases to exist as a quantity; the S2-1 gap discussion becomes historical. $\nu_0 = \Hbfour/\gs$ itself survives \emph{re-billed}: it is a triad invariant of the gravitational sector ($G_{\mathrm{shadow}}\cdot2\pi\nu_0 = 1$ exactly), marked ``retired dimensionless radion VEV'' pending a gravity-side name \Rmark \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{S3 --- Lagrangian Formulation}
+%==============================================================================
+
+The three-sector action, the \emph{derived} Mathieu equation, and the
+radion double-well with $\lambda_r = \gs/\gr^2 = 0.00547$ stand \OK.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+S3-1 & \SUP\ ``the anchor qubit can exist in two phases --- coupled
+($K_5$ topology) or decoupled ($K_4 + W$)'' & E1: $K_5$ and $K_4\cup C_5$
+are the same active phase; ``$K_4 + W$'' is not a phase label. The
+double-well physics survives with the corrected phase pair
+(active / ledger) \Rmark \\
+S3-2 & \REF\ per-sector equilibrium discussion & canonical statement is
+the isoergic theorem: $\langle\mathcal{L}\rangle = 0$ in the active phase
+\Rmark, $\langle\mathcal{L}\rangle_{\mathrm{dead}} = -\Esyn$ per dead node
+(2026; two independent routes) --- mass $=$ action deficit $=$ stored
+information. ``Compute $\langle\mathcal{L}\rangle$ first'' is now a
+methodology rule \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
+
+%==============================================================================
+\section{S4 --- Renormalization}
+%==============================================================================
+
+S4 remains \textbf{the derivation of record} for the headline computation
+\OK: tree $6\specbond/\Hbfour = 136.8239$, $+6\gs/\Hbfour$,
+$-24\gs^2\gr/\Hbfour$, 3-loop $=$ 2-loop$/\pi$ (angular screening), total
+$\alpha^{-1} = 137.033027$; termination at exactly three loops because
+$\beta_1(K_4) = 3$.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+S4-1 & \REF\ ``22 ppm'' in abstract and waterfall caption & E5: signed
+$-21.7$~ppm \\
+S4-2 & \OK\ (disambiguation, not an erratum) & S4's 3-loop
+\emph{angular screening} is legitimate and canonical. It must never be
+conflated with the later, \emph{additional} ``lattice-dressed 0.07 ppm''
+attempt, which failed and is permanently rejected (E9). The word
+``screening/dressing'' is shared; the physics is not. Verified: the dead
+result postdates S4 and appears nowhere in published records \\
+S4-3 & \REF\ loop coefficients under ``Constructed'' & \Cpmark\ with the
+named premise: the $S_4$ edge-representation $\leftrightarrow$ gauge-sector
+identification; coefficients are geometric constructions validated by
+prediction \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{S5 --- Syndrome Prediction (now: the Snap Prediction)}
+%==============================================================================
+
+The set's falsification supplement, and the one whose \emph{reading}
+changed most in v2.x while its \emph{numbers} changed not at all.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+S5-1 & \REF\ title/framing ``syndrome energy observable at the LHC'' &
+E3: $\Esyn$ $=$ the \textbf{snap energy}; the observable events are
+\textbf{driven pair snaps} (excision of weight-2 hits); weight-1
+correction is silent. The ladder: silent weight-1 / driven pair snap
+($=$ the 28 GeV event) / logical slip ($=$ proton decay) \Rmark-chain \\
+S5-2 & \REF\ abstract: ``binding contributions from 4 severed bonds each
+contributing $2\gs$'' & E7: $8$ severed intra-node edges, one $\gs$
+quantum each \\
+S5-3 & \REF\ \S6: $\alpha^2$ from ``one vertex to
+inject the error, one to \emph{measure the syndrome}'', $1/4$ from ``4
+possible stabilizer measurements'' & the arithmetic $P = \alpha^2/4$ is
+unchanged \OK; the gloss is superseded: $\alpha^2$ $=$ \textbf{two
+independent electromagnetic hits} building the uncorrectable weight-2
+error within one correction cycle --- the $90/90$ cliff; nothing
+``measures a syndrome'' at the collision \Rmark \\
+
+S5-4 & \DRIFT\ BR table vs preprint & See M-6; S5's table verified column-by-column ($N_c m_f^2$, PS
+$0.871/0.988/0.976$, $gg$ fold); the preprint's trio is its na\"ive
+pre-refinement restriction. The set's only proton-channel claim is
+S5's falsification line ``dominant channel $p \to e^+\pi^0$'' (no
+numbers) --- an import from standard baryon-number-violating operator
+phenomenology, now tagged \Cpmark; QSD derives only the $\tau_p$
+magnitude \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+S5-5 & \OK\ $\tau_p = M_X^4/(\alpha_s^2 m_p^5) = 1.9\times10^{39}$~yr &
+\UP\ the theorem is senior to the preprint's heuristic (E6) \emph{and}
+gains a mechanism: the spontaneous (undriven) weight-2 slip whose transfer
+completes ships a logical flip --- proton decay and the 28 GeV events are
+the silent and loud endings of the same cliff \Cpmark \\
+S5-6 & (post-publication addition) & the driven snap's remnant:
+$M_{\mathrm{pair}} = 2\Esyn = 56.49$~GeV locked and dark $\Rightarrow$
+\textbf{MET $\approx 56.49$~GeV recoil in every signal event} (primary
+discriminator) and $M_{\mathrm{DM}} = 2E_{\mathrm{CMS}}$ \Cpmark;
+saturation and width statements of S5 unaffected \\
+S5-7 & \SUP\ \S8.2: theorem framing and
+the remark that $\gs$ ``produces a sensible grand unification scale'' &
+``Unification'' language is \textbf{retired
+programme-wide for gauge couplings}: no coupling
+unification occurs in QSD --- the couplings are code-fixed and the
+terminating series has no running to a meeting point; nothing unifies
+at $M_X$. The section's referent survives under its correct name:
+$M_X = \Mpl\gs$ is retagged \textbf{identification} \Cpmark\
+(\emph{premise: standard GUT dimensional scaling of baryon-violating
+amplitudes}) --- a \emph{screening/mediator} scale.
+$M_X$ feeds \textbf{only} $\tau_p$ --- no
+observable of the dynamic sector $K_4\cup C_5$ depends on it.
+Read-through for the rest of the section: the ``theorem/proof'' pair is
+a motivated construction; the $SU(5)$/$SO(10)$ comparison table
+survives as literature context with its $M_X$ column re-read as the
+mediator scale; the falsification-table row ``GUT scale $\ldots$ below
+$10^{16}$~GeV'' keeps its criterion under the mediator reading (it
+constrains $\tau_p$'s sole input, nothing else). The $K_5$-holographic
+reading ($M_X$ as the anchor-sector strain scale) remains the open
+\EXPmark\ candidate \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{S6 --- String Correspondence}
+%==============================================================================
+
+Published wall-to-wall \EXPmark\ and correctly so; no \Rmark\ content ever
+depended on it. v2.x did not falsify the dictionary --- it outgrew it.
+Row-level fates: 6 edges $\leftrightarrow$ 6 CY dimensions \REF\ (edges are
+the gauge sector; no compactification map); anchor $\leftrightarrow$
+D-brane \REF\ (the surviving intuition is now exact as the ledger-surface /
+QES statement); $\gs \leftrightarrow g_s$ \REF\ (no free coupling to
+match); 3-loop termination $\leftrightarrow$ modular invariance \REF\
+(termination is graph-theoretic, $\beta_1(K_4) = 3$); ``QSD as a discrete
+string vacuum'' reframed \Omark: the landscape is \emph{code space} ---
+each $[\![n,k,d]\!]_q$ defines a native theory and $[\![5,1,3]\!]_2$ is
+thermodynamically selected (Landauer \Tmark). S6 remains the set's cleanest
+example of the \EXPmark\ discipline working as designed.
+
+\newpage
+
+%==============================================================================
+\section{S7 --- Cosmological Constant}
+%==============================================================================
+
+Arithmetic exact and suite-pinned \OK: barrier $4/\gs = 279.2570$ nats;
+$\log_{10} e^{-4/\gs} = -121.28$, landing in the observed
+$10^{-122\pm1}$ decade; compression entropy $n/\gs = 349.07$ nats.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\small
+\begin{tabular}{@{}p{0.9cm}p{5.2cm}p{7.6cm}@{}}
+\toprule
+item & as published & correction \\
+\midrule
+S7-1 & \REF\ self-label ``speculative proposal'' (pre-tag system) & \UP\
+retagged \Cpmark\ \emph{fragile}, premise named: vacuum energy is
+Boltzmann-suppressed by the syndrome-extraction entropy barrier per Planck
+4-volume. The fragility warning is part of the tag: $0.4\%$ in $\gs$
+$\leftrightarrow$ one dex in $\rho_\Lambda$ --- and landing in the right
+decade is \emph{not} evidence (the 0.07-ppm lesson). Promotion path: a
+derivation tying $e^{-4/\gs}$ to dead-node statistics \Omark \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{Technical Note TN-1 (retained in the public set)}
+\label{sec:tn1}
+%==============================================================================
+
+TN-1 created the canonical $\Hbfour$ notation (retiring the opaque
+$\mathcal{T}$) and embedded it in the $\mathrm{Hb}_n$ family --- absorbed
+into canon \OK\ (the published S1--S7 already use Hb notation). v2.x
+technical notes are internal and not citable, but TN-1 is part of the
+published v1.0 record and \textbf{remains in the v2.0 tree} alongside the
+supplements, carrying the errata below:
+
+\begin{mdframed}[backgroundcolor=Ebg,linecolor=Ecolor,linewidth=1.2pt]
+\textbf{TN1-1 \SUP\ --- wrong closed form as printed.} TN-1
+prints $\alpha^{-1}_{\mathrm{tree}} = 4\pi\gr^4/\Hbfour$, which evaluates
+to $238.8$, not $136.82$; the error factor is exactly $2\gr^2/3$ (a
+mis-substitution of $\specbond = \pi\gr^2$ into $6\specbond$).
+\textbf{Correct form \Rmark:} $\alpha^{-1}_{\mathrm{tree}} =
+6\specbond/\Hbfour = 24\pi\gr^2\ln 2 = 136.8239$. TN-1's \emph{numeric}
+uses of 136.8 are all correct; only the printed formula is wrong. The
+exact tree-level identity, now suite-pinned:
+$\alpha^{-1}_{\mathrm{tree}}\,\gs = 9\pi\ln2/10 = 1.95983$.
+\end{mdframed}
+
+\begin{mdframed}[backgroundcolor=Ebg,linecolor=Ecolor,linewidth=1.2pt]
+\textbf{TN1-2 \SUP\ --- the dual-route strain, demoted.} TN-1's
+Route~1, $\gs_{K_4} = 3/8 - \Hbfour$, its Proposition ($K_4$--Holographic
+Strain: ``holographic capacity cannot quite satisfy gauge unification''),
+and the closing claim that the 175-ppm agreement ``confirms that
+$\Hbfour$, $\gr$, and $\gs$ are manifestations of a single underlying
+structure'' are \textbf{withdrawn}. Grounds (all suite-pinned,
+\texttt{validate\_strain\_duality.py}):
+(i)~the premise is the $SU(5)$ unification value $\sin^2\theta_W = 3/8$,
+which QSD does not contain --- canon derives $\sin^2\theta_W = 3/13 +
+\gs/32$, and the main preprint explicitly postulates no grand unification;
+(ii)~the gap is \textbf{175.54 ppm exactly}, and
+$\gs_{K_4}/\gs = 10\gr^2 - \nurad$ \emph{exactly} --- the route adds no
+identity beyond the golden-form coincidence $\nurad \approx 9 + 10\gr$
+(6.97~ppm), whose look-elsewhere probability is percent-level
+($p = 0.010$, MC over $a+b\gr$, $|b| \le 12$), not ppm-rare;
+(iii)~no canonical small quantity matches the gap (nearest,
+$\gs^2\pi/4$, misses by 8.9\%).
+\textbf{Standing \Rmark:} $\gs := 3/(80\gr^2) =
+\beta_1(K_4)/(C_{\mathrm{L}}\gr^2)$ --- historically labelled the
+``$C_5$ route'' after its $\gr^2$ factor, but owned by the union
+$K_4 \cup C_5$ --- is the sole definition; the suite
+\emph{guard} (gap pinned in 100--300 ppm) is retained
+purely to prevent silent re-adoption.
+\end{mdframed}
+
+\noindent\textbf{TN1-3 (typo).} The agreement equation prints
+$|\gs - \gs|/\bar\gs$ --- the same symbol twice; intended
+$|\gs_{K_4} - \gs_{C_5}|/\bar{\gs}$.
+
+\newpage
+
+%==============================================================================
+\section{Phase-2 Concordance}
+\label{sec:concordance}
+%==============================================================================
+
+Where every affected topic now canonically lives. (P$n$/S$n$ $=$ v2.x
+papers and supplements as released in v2.0--v2.4; W$n$ $=$ derivation
+walkthrough $n$; wiki ids in typewriter font.)
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabular}{@{}p{5.6cm}p{7.9cm}@{}}
+\toprule
+v1.0 topic & canonical v2.x home \\
+\midrule
+axiom and code selection & P1 (v2.0) seven-step chain; S8 (crossing/CTC),
+S9 (observer); W6; \texttt{selection\_chain} \\
+node, triad, couplings, $\langle\mathcal{L}\rangle = 0$ & P2 (v2.1); S10;
+W2--W4; \texttt{triad}, \texttt{alpha\_inverse} \\
+lattice, metric, curvature & P3 (v2.2); S11, S12; W8;
+\texttt{metric\_hierarchy} \\
+the snap, $\Esyn$, ledger, DM & P4 (v2.3); S13, S14; W7, W11, W13--W17;
+\texttt{the\_snap}, \texttt{e\_syn}, \texttt{freeze\_protocol},
+\texttt{dark\_matter} \\
+gravity, $G_N$, Einstein equations & P5 (v2.4); S15, S16; W5, W8--W9, W12;
+\texttt{einstein\_equations} \\
+28 GeV profile and discriminators & W14 (v2.x);
+\texttt{dimuon\_syndrome\_prediction}, \texttt{predictions} \\
+error correction mechanism & W15 (correction by transfer --- the silent
+rung); \texttt{transfer\_correction} \\
+proton lifetime & \texttt{proton\_lifetime} (S5 theorem $+$ the two-fates
+mechanism, W15) \\
+$\pi$ in $\specbond$ & W10; \texttt{pi\_in\_varpi} \Cpmark \\
+cosmological constant & \texttt{cosmological\_constant} \Cpmark\ fragile \\
+string relation & \texttt{universal\_native\_code} (q-landscape);
+sharpened conjecture document \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{Verification}
+%==============================================================================
+
+\sloppy Every number quoted in this errata --- and every surviving v1.0
+number --- is machine-verified by the repository validation suite in
+\texttt{wiki/validation/}, currently \textbf{757/757} checks:
+\texttt{validate\_phase1.py} recomputes the v1.0 set against canon,
+including the full $\tau_p$ chain, the dual-route strain gap, the S2
+drift gaps, and the D17 error factor). The claim-level supersession
+tables behind this document are maintained in the knowledge base
+(\texttt{wiki/entries/phase1\_*.md}) and are regenerated against canon on
+every release.
+
+\bibliographystyle{unsrt}
+\bibliography{manuscripts/references/qsd_references}
+
+\end{document}
