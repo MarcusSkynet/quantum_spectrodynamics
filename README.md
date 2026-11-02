@@ -89,6 +89,7 @@ as errata).
 |---|---|---|
 | **v1.0** | Phase 1 — the Standard Model sector | Main preprint + supplements S1–S7 + TN-1 |
 | **v2.0** | Phase 2, Paper 1 — code selection | P1 (the QECC Selection Theorem) + S8 (crossing errors & Deutsch CTCs) + S9 (the observer) |
+| **v2.0.1** | Errata of the v2.0 set | Revision 2 of the errata (`qsd_v2_errata.pdf`): corrections only, no published file changed; read P1, S8 and S9 through it |
 | v2.1+ | Phase 2, Papers 2–5 (planned) | node & triad → lattice → transition → Einstein equations, each with its supplements |
 | v3 | Knowledge base (planned) | the QSD wiki: validated, cross-linked, machine-checked canon |
 
@@ -114,7 +115,6 @@ mapping is one-to-one on shared claims.
 quantum_spectrodynamics/
 ├── README.md                             This file
 ├── CITATION.cff                          Machine-readable citation metadata
-├── zenodo_meta.md                        Zenodo record description (modular)
 ├── environment.yml                       Conda environment for all code
 ├── Makefile                              Build PDFs + release bundles
 ├── LICENSE                               CC BY 4.0
@@ -133,17 +133,17 @@ quantum_spectrodynamics/
 │   │   ├── qsd2_s8_crossing_ctc.tex          S8: Crossing errors & Deutsch CTCs (v2.0)
 │   │   ├── qsd2_s9_observer.tex              S9: The observer (v2.0)
 │   │   └── qsd_tn1_hb_redefinition.tex       TN-1: Hb notation (read with the errata)
-│   └── derivations/                      Reviewed derivation walkthroughs (incremental)
+│   ├── derivations/                      Reviewed derivation walkthroughs (incremental)
+│   ├── preamble/                         Shared LaTeX preambles
+│   │   ├── qsd_preamble.sty                  Unified preamble (Phase 2 documents)
+│   │   └── qsd_preamble.tex                  Legacy v1 preamble (reference)
+│   ├── references/
+│   │   └── qsd_references.bib                Unified bibliography (all documents)
+│   ├── errata/
+│   │   └── qsd_v1_errata.tex                 v1.0 errata & Phase-2 concordance
+│   └── pdf/                              Pre-compiled PDFs by release (v1-0/, v2-0/),
+│                                         with the errata of both sets
 │
-├── preamble/                             Shared LaTeX preambles
-│   ├── qsd_preamble.sty                  Unified preamble (Phase 2 documents)
-│   └── qsd_preamble.tex                  Legacy v1 preamble (reference)
-├── references/
-│   └── qsd_references.bib                Unified bibliography (all documents)
-├── errata/
-│   └── qsd_v1_errata.tex                 v1.0 errata & Phase-2 concordance
-│
-├── pdf/                                  Pre-compiled PDFs (for immediate reading)
 ├── code/                                 Python computation & validation suite
 │   └── qsd_constants.py                  Single source of truth — reproduces
 │                                         every numerical prediction
@@ -159,10 +159,11 @@ All documents carry explicit relative paths to `preamble/` and
 
 ### Read
 
-Start with the two entry manuscripts in [`pdf/`](pdf/):
-`quantum_spectrodynamics.pdf` (the framework and the Standard Model sector)
-and `qsd2_p1_code_selection.pdf` (why $[[5,1,3]]$ and nothing else). Then
-follow the supplements as the text cites them.
+Start with the two entry manuscripts in [`manuscripts/pdf/`](manuscripts/pdf/):
+`v1-0/quantum_spectrodynamics.pdf` (the framework and the Standard Model sector)
+and `v2-0/qsd2_p1_code_selection.pdf` (why $[[5,1,3]]$ and nothing else). Then
+follow the supplements as the text cites them. Read P1, S8 and S9 through the
+errata of the v2.0 set, `v2-0/qsd_v2_errata.pdf`.
 
 ### Verify
 
