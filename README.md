@@ -3,7 +3,7 @@
 **A framework for deriving physical dynamics from eigenvalue spectra of quantum error correction codes**.
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18832273.svg)](https://doi.org/10.5281/zenodo.18832273)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18832272.svg)](https://doi.org/10.5281/zenodo.18832272)
 
 ---
 
@@ -194,8 +194,8 @@ make release      # dist/: loose entry PDFs + supplements+errata zip + full-repo
   title  = {Quantum Spectrodynamics},
   year   = {2026},
   howpublished = {Zenodo},
-  doi    = {10.5281/zenodo.19162378},
-  note   = {DOI:10.5281/zenodo.19162378}
+  doi    = {10.5281/zenodo.18832272},
+  note   = {DOI:10.5281/zenodo.18832272}
 }
 
 ```

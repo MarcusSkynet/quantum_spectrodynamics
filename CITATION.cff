@@ -1,4 +1,4 @@
-cff-version: 1.0.0
+cff-version: 1.2.0
 title: Quantum Spectrodynamics
 message: >-
   If you use this software or reference this work, please cite
@@ -10,7 +10,7 @@ authors:
     affiliation: Independent Researcher
     country: CZ
 repository-code: https://github.com/MarcusSkynet/quantum_spectrodynamics
-url: https://doi.org/10.5281/zenodo.18832273
+url: https://doi.org/10.5281/zenodo.18832272
 keywords:
   - quantum error correction
   - standard model
@@ -23,8 +23,15 @@ keywords:
   - theoretical physics
 license: CC-BY-4.0
 version: 2.0.0
-date-released: "2026-07-22"
-doi: 10.5281/zenodo.18832273
+date-released: "2026-08-29"
+doi: 10.5281/zenodo.18832272
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22161525
+    description: release v2.0
+  - type: doi
+    value: 10.5281/zenodo.18832273
+    description: release v1.0
 abstract: >-
   Quantum Spectrodynamics (QSD) is a framework for deriving physical
   dynamics from quantum error correction. From a single structural axiom --
